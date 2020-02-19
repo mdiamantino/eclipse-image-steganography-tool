@@ -5,7 +5,6 @@ import cv2
 import numpy as np
 from bitstring import BitArray
 
-import imageUtils
 import settings
 from EncryptionUtils import encryptMessage
 
@@ -13,9 +12,11 @@ from EncryptionUtils import encryptMessage
 class DCT:
     def __init__(self, cover_image_path, cipher_msg):
         self.__cover_image_path_ = cover_image_path
-        self.__cover_image_ = imageUtils.getImage(cover_image_path)
+        # self.__cover_image_ = imageUtils.getImage(cover_image_path)
+        self.__cover_image_ = cv2.imread(cover_image_path)
+        self.__padded_cover_image_, self.g, self.r = cv2.split(self.__cover_image_)
         self.__height_, self.__width_ = self.__cover_image_.shape[:2]
-        self.__padded_cover_image_ = self.verifyAndApplyPadding()
+        # self.__padded_cover_image_ = self.verifyAndApplyPadding()
 
         self.__cipher_msg_ = cipher_msg
         self.__bin_message_ = BitArray(bytes=cipher_msg).bin
@@ -115,17 +116,41 @@ class DCT:
 
     def encode(self):
         img = self.__padded_cover_image_
+        print(self.__bin_message_)
         msg_len = len(self.__bin_message_)
+        print(msg_len)
         self.__block_list_ = self.breakImageIntoBlocks(img, self.__height_, self.__width_)
         for msg_bit_index in range(msg_len):
             dct_block = self.getQuantizedBlock(self.__block_list_[msg_bit_index])
-            coeff = dct_block[0][0]
+            coeff = int(dct_block[0][0])
             message_bit = self.__bin_message_[msg_bit_index]
-            print(coeff)
 
+            if message_bit == '1' and (coeff % 2) == 0:  # if bit to embed is one, but LSB of coefficient is 0
+                dct_block[0][0] = coeff + 1
+            elif int(message_bit) == '0' and (coeff % 2) == 1:
+                dct_block[0][0] = coeff - 1
+            self.__block_list_[msg_bit_index] = self.getOriginalBlockFromQuantized(
+                dct_block)
+        blue_channel_image = self.recomposeImage()
+        rgb_final_image = cv2.merge((blue_channel_image, self.g, self.r))
+        # cv2.imwrite("data/output.jpg", rgb_final_image)
+        return rgb_final_image
+
+    def decode(self, rgb_final_image):
+        blue_img, g, r = cv2.split(rgb_final_image)
+        block_list = self.breakImageIntoBlocks(blue_img, self.__height_, self.__width_)
+        msg_len = 640
+        msg = ""
+        for msg_bit_index in range(msg_len):
+            dct_block = self.getQuantizedBlock(block_list[msg_bit_index])
+            coeff = int(dct_block[0][0])
+            message_bit = coeff % 2
+            msg += str(message_bit)
+        print(msg)
 
 if __name__ == "__main__":
     message = encryptMessage("hello world", "passwordd")
     d = DCT("data/testimage.jpg", message)
     d.verifyAndApplyPadding()
-    d.encode()
+    img = d.encode()
+    d.decode(img)
