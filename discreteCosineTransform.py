@@ -97,7 +97,7 @@ class DCT:
         """
         img_block = (np.subtract(block, 128))
         dct_block = cv2.dct(img_block.astype(np.float64))
-        dct_block /= settings.QUANTIZATION_TABLE
+        dct_block[0][0] /= settings.QUANTIZATION_TABLE[0][0]
         return dct_block
 
     @staticmethod
@@ -108,7 +108,7 @@ class DCT:
         :return: Original 8x8 block of pixels [NUMPY NDARRAY]
         """
         dct_block = quantized_block
-        dct_block *= settings.QUANTIZATION_TABLE
+        dct_block[0][0] *= settings.QUANTIZATION_TABLE[0][0]
         unquantized_block = cv2.idct(dct_block)
         return np.add(unquantized_block, 128)
 
