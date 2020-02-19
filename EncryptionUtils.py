@@ -1,10 +1,12 @@
 __author__ = "Mark Diamantino Caribé"
 
-from Crypto.Cipher import AES
-from Crypto.Random import get_random_bytes
-from Crypto.Protocol.KDF import PBKDF2
-from Crypto.Util.Padding import pad, unpad
 import zlib
+
+from Crypto.Cipher import AES
+from Crypto.Protocol.KDF import PBKDF2
+from Crypto.Random import get_random_bytes
+from Crypto.Util.Padding import pad, unpad
+
 from settings import SALT_LEN, DK_LEN, COUNT
 
 
