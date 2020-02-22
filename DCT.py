@@ -11,14 +11,20 @@ import imageUtils
 import settings
 
 
+# TODO: Simply methods
+# TODO: Add comments
+# TODO: Modify docstrings
+
 class DCT:
     def __init__(self, cover_image_path, cipher_msg):
         self.__cover_image_path_ = cover_image_path
         self.__cover_image_ = imageUtils.getImage(cover_image_path)
         self.__height_, self.__width_ = self.__cover_image_.shape[:2]
-        self.__padded_cover_image_ = self.verifyAndApplyPadding()
-        self.__height_, self.__width_ = self.__padded_cover_image_.shape[:2]
+        print(self.__height_, self.__width_)
 
+        self.__padded_cover_image_ = self.verifyAndApplyPadding()
+
+        self.__height_, self.__width_ = self.__padded_cover_image_.shape[:2]
         self.__cipher_text_ = cipher_msg
         self.__bin_message_ = BitArray(bytes=cipher_msg).bin
         self.verifyCiphertextSize()
@@ -35,6 +41,7 @@ class DCT:
         Eventually warns if the message length is > 10% this storage.
         """
         tot_blocks = self.__height_ * self.__width_ // 64
+        print(tot_blocks)
         message_length = len(self.__bin_message_)
         if tot_blocks < message_length:
             raise OverflowError("Cannot embed. Message is too long!")
@@ -218,6 +225,8 @@ class DCT:
         :return: Stegoimage [NUMPY NDARRAY]
         """
         img = self.__padded_cover_image_
+        YCrCbImage = cv2.cvtColor(self.__padded_cover_image_, cv2.COLOR_BGR2YCR_CB)
+        y, cr, img = cv2.split(YCrCbImage)
         mess_len = len(self.__cipher_text_)
         dic = self.getRandomBlocksFromMsglength(seed, mess_len * 8,
                                                 self.__height_, self.__width_)
@@ -239,8 +248,10 @@ class DCT:
             self.__block_list_[block_index] = self.getOriginalBlockFromQuantized(
                 dct_block)
         rgb_final_img = self.recomposeImage()
-        # cv2.imwrite(output_path, rgb_final_img)
-        return rgb_final_img
+        final_img = cv2.merge((y, cr, rgb_final_img))
+
+        cv2.imwrite("data/ycrcb_output.jpg", cv2.cvtColor(final_img, cv2.COLOR_YCR_CB2BGR))
+        return cv2.cvtColor(final_img, cv2.COLOR_YCR_CB2BGR)
 
     def decode_r(self, original_stego_img, seed):
         """
@@ -254,8 +265,11 @@ class DCT:
         :return: Message hiddent in the stegoimage [STR]
         """
         # original_stego_img = cv2.imread(stego_img_path, cv2.IMREAD_GRAYSCALE)
+
         height, width = original_stego_img.shape[:2]
         img = original_stego_img
+        YCrCbImage = cv2.cvtColor(original_stego_img, cv2.COLOR_BGR2YCR_CB)
+        y, cr, img = cv2.split(YCrCbImage)
         msg_length = DCT.extractMsglength(img, width)
         dic = DCT.getRandomBlocksFromMsglength(seed, msg_length, height, width)
         decoded_msg = "0b"
@@ -272,9 +286,9 @@ class DCT:
 if __name__ == "__main__":
     from EncryptionUtils import encryptMessage, decryptMessage
 
-    message = "HELLO WORLD"
+    message = "HELLO WORLD THIS IS A LONG MESSAGE"
     encrypted = encryptMessage(message, "password")
-    d = DCT("data/testimage.jpg", encrypted)
+    d = DCT("data/test_image.jpg", encrypted)
     encoded = d.encode_r("", 20)
     decoded = d.decode_r(encoded, 20)
     decoded_message = decryptMessage(decoded, "password")

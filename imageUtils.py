@@ -7,7 +7,7 @@ def getImage(img_path):
     :param img_path: Path to image [STR]
     :return: OpenCV grayscale image [NUMPY NDARRAY]
     """
-    img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
     if img is None:
         raise ValueError("Image was not found!")
     else:
