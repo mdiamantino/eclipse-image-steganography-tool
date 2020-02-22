@@ -5,8 +5,9 @@ import warnings
 import cv2
 import numpy as np
 from bitstring import BitArray
-import imageUtils
+
 import DCTUtils
+import imageUtils
 import settings
 
 
@@ -23,7 +24,7 @@ class DCT:
         self.verifyCiphertextSize()
 
         self.__block_list_ = None
-        self.__length_ = None
+        self.__length_ = len(self.__bin_message_)
 
     # VERIFICATION METHODS ===============================================================
 
@@ -58,7 +59,6 @@ class DCT:
         return cover_image
 
     # BREAK/RECOMPOSE METHODS ============================================================
-
 
     def breakImageIntoBlocks(self, img, height, width):
         """
@@ -112,7 +112,7 @@ class DCT:
         dct_block[0][0] *= settings.QUANTIZATION_TABLE[0][0]
         unquantized_block = cv2.idct(dct_block)
         return np.add(unquantized_block, 128)
-    
+
     # LENGTH EMBED/EXTRACT METHODS =======================================================
 
     def lengthToBinary(self):
@@ -120,20 +120,14 @@ class DCT:
         Gives binary form of the length and adds a separator to it.
         :return: Bits of the length + separator to embed [LIST OF STR]
         """
-        msg_length = len(self.__cipher_text_)
-        self.__length_ = msg_length * 8
+        assert self.__length_ % 8 == 0
+        msg_length = int(self.__length_ / 8)
         n_required_bits = msg_length.bit_length()
         if n_required_bits % 8 != 0:
             n_required_bits = (1 + (n_required_bits // 8)) * 8
         tmp = "0{}b".format(n_required_bits)
         binary_length = format(msg_length, tmp)
         return list(binary_length) + DCTUtils.stringToBinary(settings.LENGTH_MSG_SEPARATOR)
-
-    @staticmethod
-    def getBlockFromBlockIndex(img, width, block_index, block_size=8):
-        i = 8 * (block_index % (width // block_size))
-        j = 8 * (block_index // (width // block_size))
-        return img[j:j + 8, i:i + 8]
 
     def embedMsglength(self):
         """
@@ -146,14 +140,20 @@ class DCT:
         for block_index in range(len(mess_len_to_binary)):
             quantized_block = self.getQuantizedBlock(
                 self.__block_list_[block_index])
-            len_bit = mess_len_to_binary[block_index]
-            if quantized_block[0][0] % 2 == 1 and int(len_bit) == 0:
+            length_bit_to_embed = mess_len_to_binary[block_index]
+            if quantized_block[0][0] % 2 == 1 and int(length_bit_to_embed) == 0:
                 quantized_block[0][0] -= 1
-            elif quantized_block[0][0] % 2 == 0 and int(len_bit) == 1:
+            elif quantized_block[0][0] % 2 == 0 and int(length_bit_to_embed) == 1:
                 quantized_block[0][0] += 1
             self.__block_list_[block_index] = self.getOriginalBlockFromQuantized(
                 quantized_block)
         return self.__block_list_
+
+    @staticmethod
+    def getBlockFromBlockIndex(img, width, block_index, block_size=8):
+        i = 8 * (block_index % (width // block_size))
+        j = 8 * (block_index // (width // block_size))
+        return img[j:j + 8, i:i + 8]
 
     @staticmethod
     def extractMsglength(img, width):
@@ -164,10 +164,10 @@ class DCT:
         :return: length of the message to extract from the stegoimage [INT]
         """
         block_index, curr_bit = 0, 0
-        separator_not_found = True
+        separator_found = False
         letter_buffer = ""
         message_len = list()
-        while separator_not_found and block_index < 48:
+        while (not separator_found) and (block_index < settings.MAX_BITS_TO_ENCODE_LENGTH):
             block = DCT.getBlockFromBlockIndex(img, width, block_index)
             unquantized_block = DCT.getQuantizedBlock(block)
             letter_buffer += str(int(unquantized_block[0][0] % 2))
@@ -177,7 +177,7 @@ class DCT:
                 current_letter = str(chr(int(letter_buffer, 2)))
                 curr_bit = 0
                 if current_letter == settings.LENGTH_MSG_SEPARATOR:
-                    separator_not_found = not separator_not_found
+                    separator_found = True
                 else:
                     message_len.append(letter_buffer)
                 letter_buffer = ""
@@ -201,7 +201,7 @@ class DCT:
         """
         tot_blocks = height * width // 64
         random.seed(seed)
-        chosen_blocks_indices = random.sample(range(48, tot_blocks),
+        chosen_blocks_indices = random.sample(range(settings.MAX_BITS_TO_ENCODE_LENGTH, tot_blocks),
                                               binary_msg_length)
         return chosen_blocks_indices
 
@@ -257,36 +257,25 @@ class DCT:
         height, width = original_stego_img.shape[:2]
         img = original_stego_img
         msg_length = DCT.extractMsglength(img, width)
-        message = ['' for _ in range(msg_length // 8)]
         dic = DCT.getRandomBlocksFromMsglength(seed, msg_length, height, width)
-        curr_bit = 0
-        letter_buffer = ""
-
+        decoded_msg = "0b"
         block_list = self.breakImageIntoBlocks(img, height, width)
         for message_index in range(len(dic)):
             block_index = dic[message_index]
             block = block_list[block_index]
             dct_block = self.getQuantizedBlock(block)
             coeff = int(dct_block[0][0])
-            lastbit = coeff % 2
-            letter_buffer += str(lastbit)
-            curr_bit += 1
-            if curr_bit == 8:
-                message[message_index // 8] = str(chr(int(letter_buffer, 2)))
-                curr_bit = 0
-                letter_buffer = ""
-        return ''.join(message)
-
+            decoded_msg += str(coeff % 2)  # Adding to the message the currently read bit
+        return BitArray(decoded_msg).bytes
 
 
 if __name__ == "__main__":
     from EncryptionUtils import encryptMessage, decryptMessage
+
     message = "HELLO WORLD"
     encrypted = encryptMessage(message, "password")
-    print(encrypted)
     d = DCT("data/testimage.jpg", encrypted)
     encoded = d.encode_r("", 20)
     decoded = d.decode_r(encoded, 20)
-    print(decoded.encode())
-    # decoded_message = decryptMessage(decoded.encode(), "password")
-    # print(decoded_message)
+    decoded_message = decryptMessage(decoded, "password")
+    print(decoded_message)
