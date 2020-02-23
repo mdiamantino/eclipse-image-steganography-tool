@@ -6,9 +6,8 @@ import cv2
 import numpy as np
 from bitstring import BitArray
 
-import DCTUtils
-import imageUtils
 import settings
+import utils
 
 
 # TODO: Simply methods
@@ -18,52 +17,45 @@ import settings
 class DCT:
     def __init__(self, cover_image_path, cipher_msg):
         self.__cover_image_path_ = cover_image_path
-        self.__cover_image_ = imageUtils.getImage(cover_image_path)
+        self.__cover_image_ = utils.getImage(cover_image_path)
+        self.verifyAndApplyPadding()
         self.__height_, self.__width_ = self.__cover_image_.shape[:2]
-        print(self.__height_, self.__width_)
-
-        self.__padded_cover_image_ = self.verifyAndApplyPadding()
-
-        self.__height_, self.__width_ = self.__padded_cover_image_.shape[:2]
         self.__cipher_text_ = cipher_msg
         self.__bin_message_ = BitArray(bytes=cipher_msg).bin
+        self.__message_length_ = len(self.__bin_message_)
         self.verifyCiphertextSize()
 
         self.__block_list_ = None
-        self.__length_ = len(self.__bin_message_)
 
     # VERIFICATION METHODS ===============================================================
 
     def verifyCiphertextSize(self):
         """
         Verifies that the length of the message to hide
-        is less than the available place in the image.
-        Eventually warns if the message length is > 10% this storage.
+        is shorter than the maximum available space in the image.
+        Warning is raised if the message length is > (10% of the available capacity).
         """
-        tot_blocks = self.__height_ * self.__width_ // 64
-        print(tot_blocks)
-        message_length = len(self.__bin_message_)
-        if tot_blocks < message_length:
+        tot_blocks = self.__height_ * self.__width_ // 64  # 64 -> since each quantized block is a matrix of 8x8
+        if self.__message_length_ > tot_blocks:
             raise OverflowError("Cannot embed. Message is too long!")
-        elif tot_blocks / 10 < message_length:
-            warning = "Message occupies ≈ {}% of the pic. " \
-                      "A smaller text is preferred (< 10%)".format(
-                round(message_length / tot_blocks * 100))
+        elif self.__message_length_ > tot_blocks / 10:
+            purcentage_of_occupied_storage = round(self.__message_length_ / tot_blocks * 100)
+            warning = f"Message occupies ≈ {purcentage_of_occupied_storage}% of the pic. " \
+                      "A smaller text is preferred (< 10%)"
             warnings.warn(warning)
 
     def verifyAndApplyPadding(self):
         """
-        Checks and eventually resizes image
+        Checks and eventually resizes image applying a padding
         if any side length is not a multiple of 8.
-        :return: OpenCV grayscale image with sides multiple of 8 [NUMPY NDARRAY]
+        The original image is eventually replaced by the padded (with sides multiple of 8) image.
         """
-        cover_image = self.__cover_image_
-        if self.__height_ % 8 != 0 or self.__width_ % 8 != 0:
-            cover_image = cv2.resize(cover_image, (
-                self.__width_ + (8 - self.__width_ % 8),
-                self.__height_ + (8 - self.__height_ % 8)))
-            cv2.imwrite(self.__cover_image_path_, cover_image)
-        return cover_image
+        original_height, original_width = self.__cover_image_.shape[:2]
+        if original_height % 8 != 0 or original_width % 8 != 0:
+            self.__cover_image_ = cv2.resize(self.__cover_image_, (
+                original_width + (8 - original_width % 8),
+                original_height + (8 - original_height % 8)))
+            cv2.imwrite(self.__cover_image_path_, self.__cover_image_)
 
     # BREAK/RECOMPOSE METHODS ============================================================
 
@@ -127,14 +119,14 @@ class DCT:
         Gives binary form of the length and adds a separator to it.
         :return: Bits of the length + separator to embed [LIST OF STR]
         """
-        assert self.__length_ % 8 == 0
-        msg_length = int(self.__length_ / 8)
+        assert self.__message_length_ % 8 == 0
+        msg_length = int(self.__message_length_ / 8)
         n_required_bits = msg_length.bit_length()
         if n_required_bits % 8 != 0:
             n_required_bits = (1 + (n_required_bits // 8)) * 8
         tmp = "0{}b".format(n_required_bits)
         binary_length = format(msg_length, tmp)
-        return list(binary_length) + DCTUtils.stringToBinary(settings.LENGTH_MSG_SEPARATOR)
+        return list(binary_length) + utils.stringToBinary(settings.LENGTH_MSG_SEPARATOR)
 
     def embedMsglength(self):
         """
@@ -224,8 +216,8 @@ class DCT:
         :param seed: Chosen seed [INT]
         :return: Stegoimage [NUMPY NDARRAY]
         """
-        img = self.__padded_cover_image_
-        YCrCbImage = cv2.cvtColor(self.__padded_cover_image_, cv2.COLOR_BGR2YCR_CB)
+        img = self.__cover_image_
+        YCrCbImage = cv2.cvtColor(self.__cover_image_, cv2.COLOR_BGR2YCR_CB)
         y, cr, img = cv2.split(YCrCbImage)
         mess_len = len(self.__cipher_text_)
         dic = self.getRandomBlocksFromMsglength(seed, mess_len * 8,
@@ -250,7 +242,7 @@ class DCT:
         rgb_final_img = self.recomposeImage()
         final_img = cv2.merge((y, cr, rgb_final_img))
 
-        cv2.imwrite("data/ycrcb_output.jpg", cv2.cvtColor(final_img, cv2.COLOR_YCR_CB2BGR))
+        cv2.imwrite(output_path, cv2.cvtColor(final_img, cv2.COLOR_YCR_CB2BGR))
         return cv2.cvtColor(final_img, cv2.COLOR_YCR_CB2BGR)
 
     def decode_r(self, original_stego_img, seed):
@@ -267,7 +259,6 @@ class DCT:
         # original_stego_img = cv2.imread(stego_img_path, cv2.IMREAD_GRAYSCALE)
 
         height, width = original_stego_img.shape[:2]
-        img = original_stego_img
         YCrCbImage = cv2.cvtColor(original_stego_img, cv2.COLOR_BGR2YCR_CB)
         y, cr, img = cv2.split(YCrCbImage)
         msg_length = DCT.extractMsglength(img, width)
@@ -286,10 +277,10 @@ class DCT:
 if __name__ == "__main__":
     from EncryptionUtils import encryptMessage, decryptMessage
 
-    message = "HELLO WORLD THIS IS A LONG MESSAGE"
+    message = "HELLO THIS IS A LONG MESSAGE"
     encrypted = encryptMessage(message, "password")
     d = DCT("data/test_image.jpg", encrypted)
-    encoded = d.encode_r("", 20)
+    encoded = d.encode_r("data/ycrcb_output.jpg", 20)
     decoded = d.decode_r(encoded, 20)
     decoded_message = decryptMessage(decoded, "password")
     print(decoded_message)
