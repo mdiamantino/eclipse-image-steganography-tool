@@ -10,10 +10,6 @@ import settings
 import utils
 
 
-# TODO: Simply methods
-# TODO: Add comments
-# TODO: Modify docstrings
-
 class DCT:
     def __init__(self, cover_image_path, cipher_msg):
         self.__cover_image_path_ = cover_image_path
