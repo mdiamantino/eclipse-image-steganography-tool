@@ -10,6 +10,7 @@ sometimes = lambda aug: iaa.Sometimes(0.5, aug)
 class ImageEditor:
     def __init__(self, image_path):
         self.__image_path_ = image_path
+        self.__output_path_ = self.getOutputPath(self.__image_path_)
         self.__original_pic_ = imageio.imread(self.__image_path_)
         self.__augmented_pic_ = None
         self.__img_ = self.__original_pic_
@@ -91,7 +92,9 @@ class ImageEditor:
         )
 
     @staticmethod
-    def exif_remover(image_path):
+    def exif_remover(image_path: str):
+        if image_path is None:
+            raise TypeError
         output = subprocess.run(['exiftool', '-all=', image_path],
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT)
@@ -101,17 +104,18 @@ class ImageEditor:
             return output.stdout.decode('utf-8')
 
     @staticmethod
-    def getOutputPath(image_path):
+    def getOutputPath(image_path: str):
+        if image_path is None:
+            raise TypeError
         index_last_point = image_path.rindex('.')
         return image_path[:index_last_point] + "_edited.png"
 
-    def work(self):
+    def buildCoverImage(self):
         self.__augmented_pic_ = self.__seq_.augment_image(self.__original_pic_)
-        output_path = self.getOutputPath(self.__image_path_)
-        imageio.imwrite(output_path, self.__augmented_pic_)
-        self.exif_remover(output_path)
+        imageio.imwrite(self.__output_path_, self.__augmented_pic_)
+        self.exif_remover(self.__output_path_)
 
 
 if __name__ == "__main__":
     ie = ImageEditor("data/a.jpg")
-    ie.work()
+    ie.buildCoverImage()
