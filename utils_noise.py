@@ -55,107 +55,7 @@ def valid_position(size, x, y):
     return True
 
 
-def gaborK(ksize, sigma, theta, lambd, xy_ratio, sides):
-    """
-    Procedural Noise
-    # Note: Do not take these as optimized implementations.
-    :param ksize:
-    :param sigma: variance of gaussian envelope
-    :param theta: orientation
-    :param lambd: sinusoid wavelength, bandwidth
-    :param xy_ratio: value of x/y
-    :param sides: number of directions
-    :return:
-    """
-    gabor_kern = cv2.getGaborKernel((ksize, ksize), sigma, theta, lambd, xy_ratio, 0,
-                                    ktype=cv2.CV_32F)
-    for i in range(1, sides):
-        gabor_kern += cv2.getGaborKernel((ksize, ksize), sigma, theta + np.pi * i / sides,
-                                         lambd, xy_ratio, 0, ktype=cv2.CV_32F)
-    return gabor_kern
-
-
-def gaborN_rand(size, grid, num_kern, ksize, sigma, theta, lambd, xy_ratio=1, sides=1,
-                seed=0):
-    """
-    Gabor noise
-        - randomly distributed kernels
-        - anisotropic when sides = 1, pseudo-isotropic for larger "sides"
-    :param size:
-    :param grid:
-    :param num_kern:
-    :param ksize:
-    :param sigma:
-    :param theta:
-    :param lambd:
-    :param xy_ratio:
-    :param sides:
-    :param seed:
-    :return:
-    """
-    np.random.seed(seed)
-
-    # Gabor kernel
-    if sides != 1:
-        gabor_kern = gaborK(ksize, sigma, theta, lambd, xy_ratio, sides)
-    else:
-        gabor_kern = cv2.getGaborKernel((ksize, ksize), sigma, theta, lambd, xy_ratio, 0,
-                                        ktype=cv2.CV_32F)
-
-    # Sparse convolution noise
-    sp_conv = np.zeros([size, size])
-    dim = int(size / 2 // grid)
-    noise = []
-    for i in range(-dim, dim + 1):
-        for j in range(-dim, dim + 1):
-            x = i * grid + size / 2 - grid / 2
-            y = j * grid + size / 2 - grid / 2
-            for _ in range(num_kern):
-                dx = np.random.randint(0, grid)
-                dy = np.random.randint(0, grid)
-                while not valid_position(size, x + dx, y + dy):
-                    dx = np.random.randint(0, grid)
-                    dy = np.random.randint(0, grid)
-                weight = np.random.random() * 2 - 1
-                sp_conv[int(x + dx)][int(y + dy)] = weight
-
-    sp_conv = cv2.filter2D(sp_conv, -1, gabor_kern)
-    return normalize(sp_conv)
-
-
-def gaborN_uni(size, grid, ksize, sigma, lambd, xy_ratio, thetas):
-    """
-    Gabor noise
-        - controlled, uniformly distributed kernels
-    :param size:
-    :param grid: ideally is odd and a factor of size
-    :param ksize:
-    :param sigma:
-    :param lambd:
-    :param xy_ratio:
-    :param thetas: orientation of kernels, has length (size / grid)^2
-    :return:
-    """
-    sp_conv = np.zeros([size, size])
-    temp_conv = np.zeros([size, size])
-    dim = int(size / 2 // grid)
-
-    for i in range(-dim, dim + 1):
-        for j in range(-dim, dim + 1):
-            x = i * grid + size // 2
-            y = j * grid + size // 2
-            temp_conv[x][y] = 1
-            theta = thetas[(i + dim) * dim * 2 + (j + dim)]
-            # Gabor kernel
-            gabor_kern = cv2.getGaborKernel((ksize, ksize), sigma, theta, lambd, xy_ratio,
-                                            0, ktype=cv2.CV_32F)
-            sp_conv += cv2.filter2D(temp_conv, -1, gabor_kern)
-            temp_conv[x][y] = 0
-
-    return normalize(sp_conv)
-
-
-def perlin(size, period, octave, freq_sine, lacunarity=2):
+def perlin(length, height, period, octave, freq_sine, lacunarity=2):
     """
     Perlin noise
         - with sine color map
@@ -167,9 +67,9 @@ def perlin(size, period, octave, freq_sine, lacunarity=2):
     :return:
     """
     # Perlin noise
-    noise = np.empty((size, size), dtype=np.float32)
-    for x in range(size):
-        for y in range(size):
+    noise = np.empty((length, height), dtype=np.float32)
+    for x in range(length):
+        for y in range(height):
             noise[x][y] = pnoise2(x / period, y / period, octaves=octave,
                                   lacunarity=lacunarity)
     # Sine function color map
