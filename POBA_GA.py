@@ -16,6 +16,7 @@ class POBA_GA:
         self.fs = np.zeros((T, N))
         self.frs = np.zeros((T, N))
         self.phis = np.zeros((T, N))
+        self.gamma = 0 # TODO
 
     @staticmethod
     def generateRandomNoise(rows, cols, mean, var):
