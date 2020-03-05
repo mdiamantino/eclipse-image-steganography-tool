@@ -42,22 +42,24 @@ class POBA_GA:
         return y_1, p_1, y_2, p_2
 
     @staticmethod
-    def generateRandomNoise(rows, cols, mean, var):
+    def generateRandomNoise(shape, mean, var):
         sigma = var ** 0.5
-        gaussian = np.random.normal(mean, sigma, (rows, cols))
+        gaussian = np.random.normal(mean, sigma, shape)
         return gaussian
 
     def initialization(self):
         random_noises_A = []
         for i in range(self.N):
-            random_noises_A.append(self.generateRandomNoise(rows=self.height,
-                                                            cols=self.width,
-                                                            mean=0,
-                                                            var=1))
+            random_noises_A.append(self.generateRandomNoise(self.S.shape[:2], mean=0, var=1))
         self.A = np.array(random_noises_A)
-        self.A.resize((2, self.height, self.width))  # Add one dimension
+        self.A.resize((2, *self.A.shape))  # Add one dimension
         self.AS = np.zeros(self.A.shape)
         self.maxZ_A_t0 = max(self.Z(perturbation) for perturbation in self.A[0])
+        self.mergeImgPlusNoise(t=0)
+
+    def mergeImgPlusNoise(self, t):
+        for i in range(3):
+            self.AS[t][:, :, i] = self.S[:, :, i] + self.A[t]
 
     def main(self):
         """
@@ -71,7 +73,7 @@ class POBA_GA:
         last_t = 0
         for t in range(self.T):
             # Collection of the t_th iteration adversarial examples
-            self.AS[t] = self.A[t] + self.S
+            self.mergeImgPlusNoise(t)
             for i in range(self.N):
                 self.phis[t][i] = self.phi(t, i)
             for i in range(self.N):
