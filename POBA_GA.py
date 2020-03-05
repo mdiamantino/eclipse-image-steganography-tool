@@ -1,9 +1,9 @@
-from clarifai.rest import ClarifaiApp
-import cv2
 from math import exp
 from random import randrange
 
+import cv2
 import numpy as np
+from clarifai.rest import ClarifaiApp
 
 
 # ============================================================
@@ -13,7 +13,7 @@ class POBA_GA:
         self.app = ClarifaiApp(api_key='7c87e299629e4e7ea0566aca3136b214')
         self.model = self.app.public_models.general_model
         self.S = cv2.imread(image_path)
-        self.height, self.width = None, None  # TODO
+        self.height, self.width = self.S.shape[0], self.S.shape[1]
         self.maxZ_A_t0 = None
         self.T = T
         self.N = N
@@ -22,9 +22,12 @@ class POBA_GA:
         self.fs = np.zeros((T, N))
         self.frs = np.zeros((T, N))
         self.phis = np.zeros((T, N))
-        self.gamma = 0  # TODO
+        self.gamma = 0.1  # TODO
         self.A, self.AS = None, None
-        self.y_0 = self.getLables(self.S)    # True label of the adversarial image
+        self.y_0, self.p_0, _, _ = self.getLables(self.S)  # True label of the adversarial image
+        # Parameters to adjust the perturbation pixel mapping rule (if naked eye, pm1=10, pm2=5.8)
+        self.pm1, self.pm2 = 10, 5.8
+        self.initialization()
 
     def getLables(self, np_img):
         success, encoded_image = cv2.imencode('.png', np_img)
@@ -32,7 +35,9 @@ class POBA_GA:
             raise TypeError
         response = self.model.predict_by_bytes(encoded_image.tobytes(), is_video=False)
         concepts = response['outputs'][0]['data']['concepts']
+        # Label with highest confidence of the target method for AS_i_t (output label)
         y_1, p_1 = concepts[0]['name'], concepts[0]['value']
+        # Label with second highest confidence of the target method for AS_i_t
         y_2, p_2 = concepts[1]['name'], concepts[1]['value']
         return y_1, p_1, y_2, p_2
 
@@ -45,15 +50,14 @@ class POBA_GA:
     def initialization(self):
         random_noises_A = []
         for i in range(self.N):
-            random_noises_A.append(self.generateRandomNoise(rows=self.S.shape[0],
-                                                            cols=self.S.shape[1],
+            random_noises_A.append(self.generateRandomNoise(rows=self.height,
+                                                            cols=self.width,
                                                             mean=0,
                                                             var=1))
         self.A = np.array(random_noises_A)
-        self.A.resize((2, self.S.shape[0], self.S.shape[1]))  # Add one dimension
+        self.A.resize((2, self.height, self.width))  # Add one dimension
         self.AS = np.zeros(self.A.shape)
         self.maxZ_A_t0 = max(self.Z(perturbation) for perturbation in self.A[0])
-
 
     def main(self):
         """
@@ -64,9 +68,7 @@ class POBA_GA:
         :param N: Population size
         :return:
         """
-        y_1 = ""  # Label with highest confidence of the target method for AS_i_t (output label)
-        y_2 = ""  # Label with second highest confidence of the target method for AS_i_t
-        last_t=0
+        last_t = 0
         for t in range(self.T):
             # Collection of the t_th iteration adversarial examples
             self.AS[t] = self.A[t] + self.S
@@ -103,20 +105,13 @@ class POBA_GA:
         """
         m_a = A_i_t.shape[0]  # Height of the image
         m_b = A_i_t.shape[1]  # Width of the image
-        pm1, pm2 = 10, 5.8  # Parameters to adjust the perturbation pixel mapping rule (if naked eye, pm1=10, pm2=5.8)
         perturbation_size = 0
         for a in range(m_a):
             for b in range(m_b):
-                perturbation_size += (1 / (1 + exp((-abs(A_i_t[a][b]) * pm1 + pm2)))) - (
-                            1 / (1 + exp(pm2)))
+                perturbation_size += (1 / (
+                            1 + exp((-abs(A_i_t[a][b]) * self.pm1 + self.pm2)))) - (
+                                             1 / (1 + exp(self.pm2)))
         return perturbation_size
-
-    def confidence(self, y, AS_i_t):
-        """
-        Calculates the confidence that the adversarial example AS_i_t is labeled as y by the target method
-        :return:
-        """
-        return
 
     def phi(self, t, i):
         """
@@ -124,16 +119,14 @@ class POBA_GA:
         :param AS_i_t: The tth iteration of the ith adversarial example
         :return:
         """
-
         AS_i_t = self.AS[t][i]
         A_i_t = self.A[t][i]
         y_1, p_1, y_2, p_2 = self.getLables(AS_i_t)
         if y_1 != self.y_0:
-            return self.confidence(y_1, AS_i_t) - self.confidence(self.y_0,
-                                                                            AS_i_t) - (
-                           (self.alpha / self.maxZ_A_t0) * self.Z(A_i_t))
+            return p_1 - self.p_0 - (
+                    (self.alpha / self.maxZ_A_t0) * self.Z(A_i_t))
         else:
-            return self.confidence(y_2, AS_i_t) - self.confidence(self.y_0, AS_i_t)
+            return p_2 - self.p_0
 
     def f(self, t, i):
         """
@@ -174,8 +167,9 @@ class POBA_GA:
         :return: new examples
         """
         # A__t[i], A__t[j] are two parent perturbations
-        B = np.random.randint(2,
-                              size=(self.height, self.width))  # two-dimensional matrix in crossover
+
+        # two-dimensional matrix in crossover
+        B = np.random.randint(2, size=(self.height, self.width))
         if randrange(0, 1, 0.01) < self.P_c:
             b_opposite = (1 - B)
             A_i_t_plus_1 = A_i_t * B + A_j_t * b_opposite
@@ -192,9 +186,13 @@ class POBA_GA:
         :param A_i_t_plus_1:
         :return:
         """
-        C = np.random.randint(3,
-                              size=(self.height, self.width))  # two-dimensional matrix in crossover
+        # two-dimensional matrix in crossover
+        C = np.random.randint(3, size=(self.height, self.width))
         if randrange(0, 1, 0.01) < self.P_m:
             return A_i_t_plus_1 * C
         else:
             return A_i_t_plus_1
+
+
+if __name__ == "__main__":
+    poba_ga = POBA_GA("data/test_image.jpg", 300, 10)
