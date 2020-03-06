@@ -3,15 +3,14 @@ from random import randrange
 
 import cv2
 import numpy as np
-from clarifai.rest import ClarifaiApp
 
 
 # ============================================================
 
 class POBA_GA:
     def __init__(self, image_path, T, N, alpha=3, P_c=1, P_m=0.001):
-        self.app = ClarifaiApp(api_key='7c87e299629e4e7ea0566aca3136b214')
-        self.model = self.app.public_models.general_model
+        # self.app = ClarifaiApp(api_key='7c87e299629e4e7ea0566aca3136b214')
+        # self.model = self.app.public_models.general_model
         self.S = cv2.imread(image_path)
         self.height, self.width = self.S.shape[0], self.S.shape[1]
         self.maxZ_A_t0 = None
@@ -24,7 +23,8 @@ class POBA_GA:
         self.phis = np.zeros((T, N))
         self.gamma = 0.1  # TODO
         self.A, self.AS = None, None
-        self.y_0, self.p_0, _, _ = self.getLables(self.S)  # True label of the adversarial image
+        # self.y_0, self.p_0, _, _ = self.getLables(self.S)  # True label of the adversarial image
+        self.y_0, self.p_0 = "tree", 0.92
         # Parameters to adjust the perturbation pixel mapping rule (if naked eye, pm1=10, pm2=5.8)
         self.pm1, self.pm2 = 10, 5.8
         self.initialization()
@@ -50,16 +50,19 @@ class POBA_GA:
     def initialization(self):
         random_noises_A = []
         for i in range(self.N):
-            random_noises_A.append(self.generateRandomNoise(self.S.shape[:2], mean=0, var=1))
+            random_noises_A.append(
+                self.generateRandomNoise(self.S.shape[:2], mean=0, var=1))
         self.A = np.array(random_noises_A)
-        self.A.resize((2, *self.A.shape))  # Add one dimension
-        self.AS = np.zeros(self.A.shape)
+        self.A.resize((2, self.N, *self.S.shape[:2]), refcheck=False)  # Add one dimension
+        self.AS = np.zeros((*self.A.shape, 3))
         self.maxZ_A_t0 = max(self.Z(perturbation) for perturbation in self.A[0])
+        print(self.maxZ_A_t0)
         self.mergeImgPlusNoise(t=0)
 
     def mergeImgPlusNoise(self, t):
-        for i in range(3):
-            self.AS[t][:, :, i] = self.S[:, :, i] + self.A[t]
+        for channel_index in range(3):
+            self.AS[t, :, :, :, channel_index] = self.S[:, :, channel_index] + self.A[t,
+                                                                               :, :, :]
 
     def main(self):
         """
@@ -70,7 +73,7 @@ class POBA_GA:
         :param N: Population size
         :return:
         """
-        last_t = 0
+        optimal_t = 0
         for t in range(self.T):
             # Collection of the t_th iteration adversarial examples
             self.mergeImgPlusNoise(t)
@@ -80,7 +83,7 @@ class POBA_GA:
                 self.fs[t][i] = self.f(t, i)
                 self.frs[t][i] = self.fr(t, i)
             if max(self.phis[t]) > self.gamma:
-                last_t = t
+                optimal_t = t
                 break
             for n in range(self.N / 2):
                 i = self.selection(t)  # First chosen parent
@@ -90,12 +93,10 @@ class POBA_GA:
                                                                 self.A[t][j])
                 self.A[t + 1][2 * n - 1] = self.mutation(A_2n_1_t_plus_1)
                 self.A[t + 1][2 * n] = self.mutation(A_2n_t_plus_1)
-            new_shape = list(self.A.shape)
-            new_shape[0] += 1
-            self.A.resize(new_shape)
-            self.AS.resize(new_shape)
-        index_of_optimal = np.argmax(self.phis)
-        optimal_res = self.AS[last_t][index_of_optimal]
+            self.A.resize((t + 2, self.N, *self.S.shape[:2]), refcheck=False)
+            self.AS.resize((*self.A.shape, 3), refcheck=False)
+        optimal_img_indx = np.argmax(self.phis)
+        optimal_res = self.AS[optimal_t, optimal_img_indx]
         return optimal_res
 
     def Z(self, A_i_t):
@@ -111,7 +112,7 @@ class POBA_GA:
         for a in range(m_a):
             for b in range(m_b):
                 perturbation_size += (1 / (
-                            1 + exp((-abs(A_i_t[a][b]) * self.pm1 + self.pm2)))) - (
+                        1 + exp((-abs(A_i_t[a][b]) * self.pm1 + self.pm2)))) - (
                                              1 / (1 + exp(self.pm2)))
         return perturbation_size
 
@@ -121,12 +122,12 @@ class POBA_GA:
         :param AS_i_t: The tth iteration of the ith adversarial example
         :return:
         """
-        AS_i_t = self.AS[t][i]
-        A_i_t = self.A[t][i]
-        y_1, p_1, y_2, p_2 = self.getLables(AS_i_t)
+        current_perturbation_img = self.A[t][i]
+        current_adversarial_img = self.AS[t][i]
+        y_1, p_1, y_2, p_2 = self.getLables(current_adversarial_img)
         if y_1 != self.y_0:
             return p_1 - self.p_0 - (
-                    (self.alpha / self.maxZ_A_t0) * self.Z(A_i_t))
+                    (self.alpha / self.maxZ_A_t0) * self.Z(current_perturbation_img))
         else:
             return p_2 - self.p_0
 
@@ -136,7 +137,7 @@ class POBA_GA:
         :param AS_i_t: The tth iteration of the ith adversarial example
         :return: Selection probability
         """
-        return self.phi(t, i) / sum(self.phi(t, j) for j in range(self.N))
+        return self.phis[t, i] / sum(self.phis[t, j] for j in range(self.N))
 
     def fr(self, t, i):
         """
@@ -144,7 +145,7 @@ class POBA_GA:
         to produce two children by crossover and mutation operations
         :return:
         """
-        return sum(self.f(t, j) for j in range(i))
+        return sum(self.fs[t, j] for j in range(i))
 
     def selection(self, t):
         """
