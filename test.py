@@ -8,8 +8,10 @@ mean = 0
 var = 1
 sigma = var ** 0.5
 
-gaussian = np.random.normal(mean, sigma, image.shape[:2])
-noisy = np.copy(image)
-noisy[:, :, 0] = image[:, :, 0] + gaussian
-noisy[:, :, 1] = image[:, :, 1] + gaussian
-noisy[:, :, 2] = image[:, :, 2] + gaussian
+new = np.random.normal(mean, sigma, (2, 3,3))
+
+print(new)
+print()
+new[0]=new[1]
+new[1]=np.zeros(new.shape[1:])
+print(new)
