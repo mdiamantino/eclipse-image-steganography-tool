@@ -66,6 +66,7 @@ class POBA_GA:
         p = [{'label': description, 'probability': probability}
              for label, description, probability in top2]
         y_1, p_1, y_2, p_2 = p[0]['label'], p[0]['probability'], p[1]['label'], p[1]['probability']
+        print(y_1,p_1)
         if p_1 < 0.5:
             print(p_1)
         return y_1, p_1, y_2, p_2
@@ -95,14 +96,14 @@ class POBA_GA:
             print("Starting iteration n°", t)
             # Collection of the t_th iteration adversarial examples
             self.mergeImgPlusNoise()
-            for i in range(self.N):
-                self.phis[i] = self.phi(i)
-            for i in range(self.N):
-                self.fs[i] = self.f(i)
-                self.frs[i] = self.fr(i)
-            if max(self.phis) > self.gamma:
-                optimal_t = t
-                break
+            self.phis = np.array([self.phi(i) for i in range(self.N)])
+
+            tot = np.sum(self.phis)
+            self.fs = np.array([elem/tot for elem in self.phis])
+            self.frs = np.array([np.sum(self.fs[:i+1]) for i in range(len(self.fs))])
+            # if max(self.phis) > self.gamma:
+            #     optimal_t = t
+            #     break
             for n in range(self.N // 2):
                 i = self.selection()  # First chosen parent
                 j = self.selection()  # Second chosen parent
@@ -144,10 +145,10 @@ class POBA_GA:
         if y_1 != self.y_0:
             print("----> Different LABELS")
             print("DIFFERENT LABELS : %s != %s" % (y_1, y_2))
-            return p_1 - self.p_0 - (
-                    (self.alpha / self.maxZ_A_t0) * self.Z(i))
+            res = p_1 - self.p_0 - ((self.alpha / self.maxZ_A_t0) * self.Z(i))
         else:
-            return p_2 - self.p_0
+            res = p_2 - self.p_0
+        return res
 
     def f(self, i):
         """
