@@ -9,7 +9,7 @@ from keras.applications.inception_v3 import preprocess_input, decode_predictions
 # ============================================================
 
 class POBA_GA:
-    def __init__(self, image_path, T, N, alpha=3, P_c=1, P_m=0.001):
+    def __init__(self, image_path, T, N, alpha=3, P_c=1, P_m=0.1):
         # self.app = ClarifaiApp(api_key='7c87e299629e4e7ea0566aca3136b214')
         # self.model = self.app.public_models.general_model
         self.model = efn.EfficientNetB0(weights='imagenet')  # or weights='noisy-student'
@@ -30,6 +30,7 @@ class POBA_GA:
         # Parameters to adjust the perturbation pixel mapping rule (if naked eye, pm1=10, pm2=5.8)
         self.pm1, self.pm2 = 10, 5.8
         self.mean, self.variance = 0, 0.5
+        self.attacked = False
         self.initialization()
         print("ok")
 
@@ -44,7 +45,6 @@ class POBA_GA:
         self.maxZ_A_t0 = max(self.Z(i) for i in range(len(self.A[0])))
         # print(self.maxZ_A_t0)
         # self.mergeImgPlusNoise(t=0)
-
 
     def getLables(self, np_img):
         """success, encoded_image = cv2.imencode('.png', np_img)
@@ -66,9 +66,9 @@ class POBA_GA:
         p = [{'label': description, 'probability': probability}
              for label, description, probability in top2]
         y_1, p_1, y_2, p_2 = p[0]['label'], p[0]['probability'], p[1]['label'], p[1]['probability']
-        print(y_1,p_1)
-        if p_1 < 0.5:
-            print(p_1)
+        # print(y_1, p_1)
+        # if p_1 < 0.5:
+        #     print(p_1)
         return y_1, p_1, y_2, p_2
 
     @staticmethod
@@ -76,7 +76,6 @@ class POBA_GA:
         sigma = var ** 0.5
         gaussian = np.random.normal(mean, sigma, shape)
         return gaussian
-
 
     def mergeImgPlusNoise(self):
         for channel_index in range(3):
@@ -97,10 +96,11 @@ class POBA_GA:
             # Collection of the t_th iteration adversarial examples
             self.mergeImgPlusNoise()
             self.phis = np.array([self.phi(i) for i in range(self.N)])
-
+            if self.attacked:
+                break
             tot = np.sum(self.phis)
-            self.fs = np.array([elem/tot for elem in self.phis])
-            self.frs = np.array([np.sum(self.fs[:i+1]) for i in range(len(self.fs))])
+            self.fs = np.divide(self.phis, tot)
+            self.frs = np.array([np.sum(self.fs[:i + 1]) for i in range(len(self.fs))])
             # if max(self.phis) > self.gamma:
             #     optimal_t = t
             #     break
@@ -110,14 +110,14 @@ class POBA_GA:
                 # assert i != j
                 A_2n_1_t_plus_1, A_2n_t_plus_1 = self.crossover(self.A[0][i],
                                                                 self.A[0][j])
-                self.A[1][2 * n - 1] = self.mutation(A_2n_1_t_plus_1)
-                self.A[1][2 * n] = self.mutation(A_2n_t_plus_1)
+                self.A[1, (2 * n)] = self.mutation(A_2n_1_t_plus_1)
+                self.A[1, ((2 * n) + 1)] = self.mutation(A_2n_t_plus_1)
             self.A[0] = self.A[1]
             self.A[1] = np.zeros(self.A.shape[1:])
-            self.A.resize((t + 2, self.N, *self.S.shape[:2]), refcheck=False)
+
         optimal_img_indx = np.argmax(self.phis)
         optimal_res = self.AS[optimal_img_indx]
-        print(optimal_res)
+        print(optimal_res.tolist())
         return optimal_res
 
     def Z(self, i):
@@ -139,12 +139,12 @@ class POBA_GA:
         :param AS_i_t: The tth iteration of the ith adversarial example
         :return:
         """
-        current_perturbation_img = self.A[0][i]
         current_adversarial_img = self.AS[i]
         y_1, p_1, y_2, p_2 = self.getLables(current_adversarial_img)
         if y_1 != self.y_0:
             print("----> Different LABELS")
             print("DIFFERENT LABELS : %s != %s" % (y_1, y_2))
+            self.attacked = True
             res = p_1 - self.p_0 - ((self.alpha / self.maxZ_A_t0) * self.Z(i))
         else:
             res = p_2 - self.p_0
@@ -158,7 +158,7 @@ class POBA_GA:
         """
         return self.phis[i] / sum(self.phis[j] for j in range(self.N))
 
-    def fr(self,i):
+    def fr(self, i):
         """
         The cumulative probability of AS_i_t
         to produce two children by crossover and mutation operations
@@ -195,8 +195,8 @@ class POBA_GA:
         if random() < self.P_c:
             # print("ok")
             b_opposite = (1 - B)
-            A_i_t_plus_1 = A_i_t * B + A_j_t * b_opposite
-            A_j_t_plus_1 = A_i_t * b_opposite + A_j_t * B
+            A_i_t_plus_1 = (A_i_t * B) + (A_j_t * b_opposite)
+            A_j_t_plus_1 = (A_i_t * b_opposite) + (A_j_t * B)
         else:
             # print("not okay")
             A_i_t_plus_1 = A_i_t
