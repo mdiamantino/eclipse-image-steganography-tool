@@ -19,7 +19,7 @@ def predict(image_file):
     return p[0]['label'], p[0]['probability'], p[1]['label'], p[1]['probability']
 
 
-pred = predict("/home/mdc/PycharmProjects/eclipse/data/test_image.jpg")
+pred = predict("/adversarial_example.jpg")
 
 print()
 print(pred)
