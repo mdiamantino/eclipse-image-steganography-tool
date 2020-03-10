@@ -19,7 +19,7 @@ def predict(image_file):
     return p[0]['label'], p[0]['probability'], p[1]['label'], p[1]['probability']
 
 
-pred = predict("/adversarial_example.jpg")
+pred = predict("output.jpg")
 
 print()
 print(pred)
