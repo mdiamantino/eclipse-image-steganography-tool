@@ -36,12 +36,11 @@ class POBA_GA:
         self.initialization()
 
     def initialization(self):
-        print("\n[*] STARTING INITIALIZATION")
         random_noises_A = [self.generateRandomNoise(self.S.shape[:2]) for _ in range(self.N)]
         self.A[0] = cp.array(random_noises_A)
         self.maxZ_A_t0 = max(self.Z(i) for i in range(len(self.A[0])))
         print(self.maxZ_A_t0)
-        print("[*] ENDING INITIALIZATION\n")
+        print("[*] INITIALIZATION COMPLETED\n")
 
     def getLables(self, np_img):
         """success, encoded_image = cv2.imencode('.png', np_img)
@@ -86,28 +85,29 @@ class POBA_GA:
         :param N: Population size
         :return:
         """
+        print("[*] STARTING ATTACK")
         for t in range(self.T):
-            print("Starting iteration n°", t)
+            print("\t[-] Iteration", t)
             self.mergeImgPlusNoise()
-            self.phis = cp.array([self.phi(i) for i in range(self.N)]) # TODO: FIX BUG
+            self.phis = cp.array([self.phi(i) for i in range(self.N)])  # TODO: FIX BUG
             if self.attacked:
                 print("MAX---> ", cp.max(self.phis))
                 # break
-            self.fs = cp.divide(self.phis, cp.sum(self.phis))
-            self.frs = cp.array([cp.sum(self.fs[:i + 1]) for i in range(len(self.fs))])
+            self.computeSelectionProbabilities()
+            self.computeCumulativeProbabilities()
             # if max(self.phis) > self.gamma:
             #     optimal_t = t
             #     break
             for n in range(self.N // 2):
-                i = self.selection()  # First chosen parent
-                j = self.selection()  # Second chosen parent
+                i = self.rouletteSelection()  # First chosen parent
+                j = self.rouletteSelection()  # Second chosen parent
                 A_2n_1_t_plus_1, A_2n_t_plus_1 = self.crossover(self.A[0][i],
                                                                 self.A[0][j])
                 self.A[1, (2 * n)] = self.mutation(A_2n_1_t_plus_1)
                 self.A[1, ((2 * n) + 1)] = self.mutation(A_2n_t_plus_1)
             self.A[0] = self.A[1]
             self.A[1] = cp.zeros(self.A.shape[1:])
-
+        print("[*] ATTACK COMPLETED\n")
         optimal_img_indx = cp.argmax(self.phis)
         optimal_res = self.AS[optimal_img_indx]
         print(optimal_res.tolist())
@@ -117,19 +117,14 @@ class POBA_GA:
         """
         Calculates the perturbation size of adversarial example.
         It is a perturbation calculation indicator.
-        :param A_i_t:  The tth iteration of the ith ith perturbation
-        :return: Perturbation size
         """
-        var = (-cp.abs(self.A[0,i]) * self.pm1 + self.pm2)
-        first_exp = cp.exp(var)
-        second_exp = cp.exp(self.pm2)
-        perturbation_size = (1 / (1 + first_exp) - 1 / (1 + second_exp))
+        var = (-cp.abs(self.A[0, i]) * self.pm1 + self.pm2)
+        perturbation_size = (1 / (1 + cp.exp(var)) - 1 / (1 + cp.exp(self.pm2)))
         return cp.sum(perturbation_size)/self.img_area
 
     def phi(self, i):
         """
-        For a given AS_i_t, calculates its fitness function.
-        :param AS_i_t: The tth iteration of the ith adversarial example
+        For a given adversarial example, calculates its fitness function.
         :return:
         """
         current_adversarial_img = self.AS[i]
@@ -144,28 +139,25 @@ class POBA_GA:
         print(res)
         return res
 
-    def f(self, i):
+    def computeSelectionProbabilities(self):
         """
-        For a given AS_i_t, calculates its selection probability.
-        :param AS_i_t: The tth iteration of the ith adversarial example
-        :return: Selection probability
+        Calculates the selection probability of all adversarial examples.
+        Probabilities are stocked to the vector.
         """
-        return self.phis[i] / sum(self.phis[j] for j in range(self.N))
+        self.fs = cp.divide(self.phis, cp.sum(self.phis))
 
-    def fr(self, i):
+    def computeCumulativeProbabilities(self):
         """
-        The cumulative probability of AS_i_t
-        to produce two children by crossover and mutation operations
-        :return:
+        Calculates the cumulative probability of all adversarial examples.
+        It is mandatory to produce two children by crossover and mutation operations.
         """
-        return sum(self.fs[j] for j in range(i))
+        self.frs = cp.array([cp.sum(self.fs[:i + 1]) for i in range(len(self.fs))])
 
-    def selection(self):
+    def rouletteSelection(self):
         """
-        Let choose two parent examples to produce two children by crossover and mutation operators.
-        :param AS__t: The collection of t_th iteration adversarial examples
-        (when t=0, it represents the initial adversarial example)
-        :return:
+        Selects the perturbations corresponding to the adversarial examples:
+        Chooses two parent examples to produce
+        two children by crossover and mutation operators.
         """
         i = 0
         while i < self.N and random() < self.frs[i]:
