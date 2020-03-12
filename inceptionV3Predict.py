@@ -18,6 +18,18 @@ def predict(image_file):
          for label, description, probability in top2]
     return p[0]['label'], p[0]['probability'], p[1]['label'], p[1]['probability']
 
+def predictFromArray(array):
+    img = image.load_img(image_file, target_size=(224, 224))
+    x = image.img_to_array(array)
+    x = np.expand_dims(x, axis=0)
+    x = preprocess_input(x)
+
+    preds = model.predict(x)
+    top2 = decode_predictions(preds, top=2)[0]
+    p = [{'label': description, 'probability': probability}
+         for label, description, probability in top2]
+    return p[0]['label'], p[0]['probability'], p[1]['label'], p[1]['probability']
+
 
 pred = predict("output.jpg")
 
