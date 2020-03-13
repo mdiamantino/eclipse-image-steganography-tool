@@ -1,17 +1,14 @@
-from random import random
-from time import sleep
-import logging
+import os
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import cv2
+from random import random
 import efficientnet.keras as efn
 import numpy as np
-# import jax.numpy as np
-# from numba import cuda
-# import cupy as np
 from PIL import Image
 from keras.applications.inception_v3 import preprocess_input, \
     decode_predictions
 from skimage.color import gray2rgb
-from skimage.util import random_noise
 
 
 def predictWithCLarifai(np_img):
@@ -31,9 +28,6 @@ def predictWithCLarifai(np_img):
 def predictWithInceptionV3(np_img):
     pillow_image = Image.fromarray(np_img)
     x = np.array(pillow_image.resize((224, 224), Image.NEAREST))
-    # x = cv2.resize(np_img,
-    #                dsize=(224, 224),
-    #                interpolation=cv2.INTER_CUBIC)
     x = np.expand_dims(x, axis=0)
     x = preprocess_input(x)
     preds = model.predict(x)
@@ -90,18 +84,20 @@ class AdversarialAttacker:
         self.__max_initial_perturbation_ = None
         self.__optimal_adv_img_ = None
         self.__last_label_ = None
+        self.__need_to_end = (False, None)
         self.__fitness_values_ = np.zeros(shape=pop_size)
         self.__selection_probabilities_ = np.zeros(shape=pop_size)
-        # self.__cumulative_probabilities_ = np.zeros(shape=pop_size)
         self.__termination_condition_ = gamma
-        self.__original_label_, self.__original_confidence_, _, _ = self.__getLables(
-            self.__original_img_)
+        y0, p0, y2, _ = self.__getLables(self.__original_img_)
+        self.__original_label_ = y0
+        self.__original_confidence_ = p0
+        self.__second_original_label = y2
         print("[!] Original Label='{}' - Confidence = {}"
               .format(self.__original_label_, self.__original_confidence_))
-        # Parameters to adjust the perturbation pixel mapping rule (if naked eye, pm1=10, pm2=5.8)
+        # Parameters to adjust the perturbation pixel mapping rule
+        # (if naked eye, pm1=10, pm2=5.8)
         self.__pm1_, self.__pm2_ = pm1, pm2
         self.__mean_, self.__variance_ = mean, variance
-        self.isAttacked = False
         self.__adv_perturbations_ = np.zeros(shape=(2,
                                                     self.__population_size_,
                                                     *self.__original_img_.shape[
@@ -113,37 +109,21 @@ class AdversarialAttacker:
                                         dtype='uint8')
 
     def generate_adversarial_image(self):
-        """
-        MAIN METHOD
-        :return:
-        """
         self.__initialize_randomly()
         print("[*] STARTING ATTACK")
         for t in range(self.__max_iterations_):
             self.__merge_img_wth_noise()
-            self.__fitness_values_ = np.array(
-                [self.__compute_fitness_value(i) for i in
-                 range(self.__population_size_)])
-            # print(self.__fitness_values_.tolist())
+            self.__compute_fitness_values()
             print("\t[+] Iteration {} - Max Fitness Value = {}"
-                  .format(t, self.__fitness_values_.max(), 2))
-
-            # if self.isAttacked:
-            #     print("MAX---> ", cp.max(self.__fitness_values_))
-
+                  .format(t, np.max(self.__fitness_values_), 2))
+            if self.__need_to_end[0]:
+                break
             self.__compute_selection_probabilities()
-            # self.__compute_cumulative_probabilities()
-            # if np.max(self.__fitness_values_) > self.__termination_condition_:
-            #     break
             for n in range(self.__population_size_ // 2):
-                # Parents selection
                 i, j = self.__roulette_selection()
-                # Crossover of parents
                 A_2n_1_t_plus_1, A_2n_t_plus_1 = self.__crossover(
                     self.__adv_perturbations_[0][i],
                     self.__adv_perturbations_[0][j])
-
-                # Mutation
                 self.__adv_perturbations_[1, (2 * n)] = self.__mutation(
                     A_2n_1_t_plus_1)
                 self.__adv_perturbations_[1, ((2 * n) + 1)] = self.__mutation(
@@ -178,11 +158,6 @@ class AdversarialAttacker:
         gaussian_noise = np.random.normal(self.__mean_,
                                           sigma,
                                           random_noise_shape).astype('uint8')
-        # noise = random_noise(np.zeros(random_noise_shape),
-        #                      mode="gaussian",
-        #                      mean=self.__mean_,
-        #                      var=self.__variance_)
-        # gaussian_noise = np.array(255 * noise, dtype='uint8')
         return gaussian_noise
 
     # MEASURE UTILS ===========================================================
@@ -202,7 +177,12 @@ class AdversarialAttacker:
 
     # GENETIC SELECTION UTILS =================================================
 
-    def __compute_fitness_value(self, i):
+    def __compute_fitness_values(self):
+        self.__fitness_values_ = np.array(
+            [self.__get_fitness_of(i) for i in
+             range(self.__population_size_)])
+
+    def __get_fitness_of(self, i):
         """
         It evaluates the quality of adversarial example.
         :return: Quality of adv. example
@@ -210,19 +190,17 @@ class AdversarialAttacker:
         current_adversarial_img = self.__adv_examples_[i]
         predicted_label, curr_confidence, second_label, second_confidence = \
             self.__getLables(current_adversarial_img)
-        # print(predicted_label, curr_confidence, second_label, second_confidence)
-        res = self.__original_confidence_ - curr_confidence
         # res = curr_confidence - self.__original_confidence_
+        res = self.__original_confidence_ - curr_confidence
         if predicted_label != self.__original_label_:
             self.__last_label_ = predicted_label
-            # print("----> Different LABELS")
-            print("\t\t[!!!] New Label : '%s'" % predicted_label)
-
-            self.isAttacked = True
+            if predicted_label != self.__original_label_ and \
+                    predicted_label != self.__second_original_label:
+                self.__need_to_end = (True, i)
+                print("\t\t[!!!] New Label : '%s'" % predicted_label)
             res -= (self.__compute_perturbation_size(i)
                     / self.__max_initial_perturbation_) \
                    * self.__perturbation_ratio_
-
         return res
 
     def __compute_selection_probabilities(self):
@@ -230,24 +208,12 @@ class AdversarialAttacker:
         Calculates the selection probability of all adversarial examples.
         Probabilities are stocked to the vector.
         """
-
         positive = self.__fitness_values_ + np.abs(
             np.min(self.__fitness_values_)
         )
         self.__selection_probabilities_ = np.divide(
             positive, np.sum(positive)
         )
-        # print("TOTAL = ", np.sum(self.__selection_probabilities_))
-
-    # def __compute_cumulative_probabilities(self):
-    #     """
-    #     Calculates the cumulative probability of all adversarial examples.
-    #     It is mandatory to produce two children
-    #     by crossover and mutation operations.
-    #     """
-    #     self.__cumulative_probabilities_ = np.array([
-    #         np.sum(self.__selection_probabilities_[:i + 1])
-    #         for i in range(len(self.__selection_probabilities_))])
 
     # GENETIC ALGORITHMS ======================================================
 
@@ -257,15 +223,9 @@ class AdversarialAttacker:
         Chooses two parent examples to produce
         two children by crossover and mutation operators.
         """
-        # print(self.__selection_probabilities_)
         return np.random.choice([i for i in range(self.__population_size_)],
                                 size=2,
                                 p=self.__selection_probabilities_)
-        # i = 0
-        # while i < self.__population_size_ - 1 \
-        #         and random() > self.__cumulative_probabilities_[i]:
-        #     i += 1
-        # return i
 
     def __crossover(self, adv_noise_i, adv_noise_j):
         """
@@ -290,7 +250,6 @@ class AdversarialAttacker:
         :param future_adv_noise:
         :return: Muted example
         """
-        # two-dimensional matrix in crossover
         C = np.random.randint(3, size=(self.__height_, self.__width_))
         if random() < self.__p_mutation_:
             possibly_muted = future_adv_noise * C
