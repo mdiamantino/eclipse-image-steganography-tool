@@ -3,8 +3,8 @@ __author__ = "Mark Diamantino Caribé"
 import numpy as np
 
 SALT_LEN = 32
-DK_LEN = 16
-COUNT = 10000
+DK_LEN = 32
+COUNT = 100000
 QUANTIZATION_TABLE = np.array([[16, 11, 10, 16, 24, 40, 51, 61],
                                [12, 12, 14, 19, 26, 58, 60, 55],
                                [14, 13, 16, 24, 40, 57, 69, 56],

@@ -3,39 +3,41 @@ __author__ = "Mark Diamantino Caribé"
 import zlib
 
 from Crypto.Cipher import AES
-from Crypto.Protocol.KDF import PBKDF2
-from Crypto.Random import get_random_bytes
 from Crypto.Util.Padding import pad, unpad
 
 from settings import SALT_LEN, DK_LEN, COUNT
 
+import base64
+import os
+from cryptography.fernet import Fernet
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-def getSaltedKeyFromPassword(password):
-    salt = get_random_bytes(SALT_LEN)
-    key = PBKDF2(password, salt, dkLen=DK_LEN, count=COUNT)
-    return salt, key
 
-
-def getKeyFromSaltAndPassword(salt, password):
-    key = PBKDF2(password, salt, dkLen=DK_LEN, count=COUNT)
+def getSaltedKeyFromPassword(salt, password):
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=DK_LEN,
+        salt=salt,
+        iterations=COUNT,
+        backend=default_backend()
+    )
+    key = base64.urlsafe_b64encode(kdf.derive(password))
     return key
-
 
 def encryptMessage(message_to_encrypt, password):
     encoded_to_encrypt = message_to_encrypt.encode('utf-8')
     compressed_to_encrypt = zlib.compress(encoded_to_encrypt)
-    salt, key = getSaltedKeyFromPassword(password)
-    encoder = AES.new(key, AES.MODE_CBC)
-    ct_bytes = encoder.encrypt(pad(compressed_to_encrypt, AES.block_size))
-    return salt + encoder.iv + ct_bytes
+    salt = os.urandom(SALT_LEN)
+    key = getSaltedKeyFromPassword(salt, password.encode())
+    cipher = Fernet(key).encrypt(compressed_to_encrypt)
+    return salt + cipher
 
 
 def decryptMessage(cipher_message, password):
-    key = getKeyFromSaltAndPassword(salt=cipher_message[:SALT_LEN],
-                                    password=password)
-    iv = cipher_message[SALT_LEN:SALT_LEN + 16]
-    message_to_decrypt = cipher_message[SALT_LEN + 16:]
-    decoder = AES.new(key, AES.MODE_CBC, iv)
-    pt = unpad(decoder.decrypt(message_to_decrypt), AES.block_size)
+    key = getSaltedKeyFromPassword(salt=cipher_message[:SALT_LEN],
+                                   password=password.encode())
+    pt = Fernet(key).decrypt(cipher_message[SALT_LEN:])
     original_message = zlib.decompress(pt)
     return original_message.decode('utf-8')
