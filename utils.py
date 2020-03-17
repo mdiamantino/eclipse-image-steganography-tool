@@ -10,8 +10,7 @@ def getImage(img_path):
     img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
     if img is None:
         raise ValueError("Image was not found!")
-    else:
-        return img
+    return img
 
 
 def stringToBinary(string_text):

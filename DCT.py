@@ -38,7 +38,7 @@ class DCT:
         tot_blocks = self.__height_ * self.__width_ // 64
         if self.__message_length_ > tot_blocks:
             raise OverflowError("Cannot embed. Message is too long!")
-        elif self.__message_length_ > tot_blocks / 10:
+        if self.__message_length_ > tot_blocks / 10:
             purcentage_of_occupied_storage = round(
                 self.__message_length_ / tot_blocks * 100)
             warning = f"Message occupies ≈ {purcentage_of_occupied_storage}% of the pic. " \
@@ -163,7 +163,7 @@ class DCT:
         :param width: Width of the stegoimage [INT]
         :return: length of the message to extract from the stegoimage [INT]
         """
-        block_index, curr_bit = 0, 0
+        block_index = 0
         separator_found = False
         decoded_length = ""
         while (not separator_found) and (
@@ -233,8 +233,10 @@ class DCT:
             self.__block_list_[
                 block_index] = self.getOriginalBlockFromQuantized(
                 dct_block)
-        cb = self.recomposeImage()
-        final_img_standard_format = utils.getOriginalImgFromYCrCb(y, cr, cb)
+        modified_cb = self.recomposeImage()
+        final_img_standard_format = utils.getOriginalImgFromYCrCb(y,
+                                                                  cr,
+                                                                  modified_cb)
         cv2.imwrite(output_path, final_img_standard_format)
         return final_img_standard_format
 
