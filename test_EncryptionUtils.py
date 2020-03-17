@@ -7,7 +7,7 @@ from EncryptionUtils import encryptMessage, decryptMessage
 
 def randomString(stringLength):
     letters = string.ascii_letters + string.digits + string.punctuation
-    return ''.join(random.choice(letters) for i in range(stringLength))
+    return ''.join(random.choice(letters) for _ in range(stringLength))
 
 
 def testApplication(num_tests):
