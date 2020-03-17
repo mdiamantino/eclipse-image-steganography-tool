@@ -3,8 +3,10 @@ import imgaug.augmenters as iaa
 
 import settings as st
 
+
 def sometimes(aug):
     return iaa.Sometimes(0.8, aug)
+
 
 class ImageAugmentor:
     def __init__(self, img):

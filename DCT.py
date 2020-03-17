@@ -129,7 +129,7 @@ class DCT:
         Gives binary form of the length and adds a separator to that representation.
         :return: Binary representation of the length + separator to embed [LIST OF STR]
         """
-        if self.__message_length_ % 8 == 0:
+        if self.__message_length_ % 8 != 0:
             raise ValueError("Message length is not multiple of 8")
         msg_length = int(
             self.__message_length_ / 8)  # Decimal representation of the length
@@ -257,7 +257,7 @@ class DCT:
         :return: Message hidden in the stegoimage [BYTE STR]
         """
         original_stego_img = utils.getImage(setego_img_path)
-        y, cr, cb = utils.getYCrCbFromOriginalImg(original_stego_img)
+        _, _, cb = utils.getYCrCbFromOriginalImg(original_stego_img)
         height, width = original_stego_img.shape[:2]
         msg_length = DCT.extractMsglength(cb, width)
         positions_lst = DCT.getRandomBlocksFromMsgLength(
