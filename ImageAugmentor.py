@@ -4,12 +4,18 @@ import imgaug.augmenters as iaa
 import settings as st
 
 
-def sometimes(aug):
+def sometimes(aug: iaa):
+    """
+    Sometimes(0.5, ...) applies the given augmenter in 50% of all cases,
+    e.g. Sometimes(0.5, GaussianBlur(0.3)) would blur roughly every second image.
+    :param aug: Type of augmentation
+    :return: Desired augmentation with a certain probability
+    """
     return iaa.Sometimes(0.8, aug)
 
 
 class ImageAugmentor:
-    def __init__(self, img):
+    def __init__(self, img: ia.imageio.core.util.Array):
         self.__original_pic_ = img
         self.__augmented_pic_ = None
         self.__seq_ = iaa.Sequential(

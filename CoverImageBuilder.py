@@ -7,15 +7,20 @@ from ImageAugmentor import ImageAugmentor
 
 
 class CoverImageBuilder:
-    def __init__(self, image_path):
+    def __init__(self, image_path: str):
         self.__image_path_ = abspath(image_path)
-        self.__output_path_ = self.getOutputPath(self.__image_path_)
+        self.__output_path_ = self.gen_output_path(self.__image_path_)
         self.__original_pic_ = imageio.imread(self.__image_path_)
         self.__augmentor_ = ImageAugmentor(self.__original_pic_)
         self.__img_ = self.__original_pic_
 
     @staticmethod
-    def exif_remover(image_path: str):
+    def remove_exifs(image_path: str) -> str:
+        """
+        Remove EXIFS from an image.
+        :param image_path: Path of the image from which need to remove EXIFS [STR]
+        :return:
+        """
         if image_path is None:
             raise TypeError
         output = subprocess.run(['exiftool', '-all=', image_path],
@@ -27,18 +32,28 @@ class CoverImageBuilder:
         return output.stdout.decode('utf-8')
 
     @staticmethod
-    def getOutputPath(image_path: str):
+    def gen_output_path(image_path: str) -> str:
+        """
+        Builds the output path of the final image.
+        :param image_path: Original image path [STR]
+        :return: Modified path [STR]
+        """
         if image_path is None:
             raise TypeError
         index_last_point = image_path.rindex('.')
         return image_path[:index_last_point] + "_edited.png"
 
-    def buildCoverImage(self):
+    def build_cover_image(self):
+        """
+        Builds the cover image:
+        1) Performs augmentation
+        2) Remove exifs
+        """
         augmented_img = self.__augmentor_.getAugmentedImage()
         imageio.imwrite(self.__output_path_, augmented_img)
-        self.exif_remover(self.__output_path_)
+        self.remove_exifs(self.__output_path_)
 
 
 if __name__ == "__main__":
     ie = CoverImageBuilder("data/test_image.jpg")
-    ie.buildCoverImage()
+    ie.build_cover_image()

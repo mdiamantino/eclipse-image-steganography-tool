@@ -13,19 +13,19 @@ import utils
 class DCT:
     def __init__(self, cover_image_path, cipher_msg):
         self.__cover_image_path_ = cover_image_path
-        self.__cover_image_ = utils.getImage(cover_image_path)
-        self.verifyAndApplyPadding()
+        self.__cover_image_ = utils.get_image(cover_image_path)
+        self.verify_and_apply_padding()
         self.__height_, self.__width_ = self.__cover_image_.shape[:2]
         self.__cipher_text_ = cipher_msg
         self.__bin_message_ = BitArray(bytes=cipher_msg).bin
         self.__message_length_ = len(self.__bin_message_)
-        self.verifyCiphertextSize()
+        self.verify_ciphertext_size()
 
         self.__block_list_ = None
 
     # VERIFICATION METHODS ============================================================
 
-    def verifyCiphertextSize(self):
+    def verify_ciphertext_size(self):
         """
         Verifies that the length of the message to hide
         is shorter than the maximum available space in the image.
@@ -46,7 +46,7 @@ class DCT:
                       "A smaller text is preferred (< 10%)"
             warnings.warn(warning)
 
-    def verifyAndApplyPadding(self):
+    def verify_and_apply_padding(self):
         """
         Checks and eventually resizes image applying a padding
         if any side length is not a multiple of 8.
@@ -63,7 +63,7 @@ class DCT:
     # BREAK/RECOMPOSE METHODS =========================================================
 
     @staticmethod
-    def breakImageIntoBlocks(img, height, width):
+    def break_image_into_blocks(img: np.ndarray) -> list:
         """
         Breaks the coverimage into a sequence of 8x8 blocks,
         from top left to bottom right.
@@ -72,11 +72,12 @@ class DCT:
         """
         if not isinstance(img, np.ndarray):
             raise TypeError("Cannot break a non np.array image")
+        height, width = len(img), len(img[0])
         return [img[j: j + 8, i: i + 8] for (j, i) in
                 itertools.product(range(0, height, 8),
                                   range(0, width, 8))]
 
-    def recomposeImage(self):
+    def recompose_image(self) -> np.ndarray:
         """
         Inverse of method 'breakImageIntoBlocks':
         Recompose the image from the sorted list of blocks of pixels '__block_list_'.
@@ -98,7 +99,7 @@ class DCT:
     # QUANTIZATION METHODS ============================================================
 
     @staticmethod
-    def getQuantizedBlock(block):
+    def quantize_block(block: np.ndarray) -> np.ndarray:
         """
         Centers values of a block, runs it through DCT func. and quantizes it.
         :param block: 8x8 block of pixels [NUMPY NDARRAY]
@@ -111,7 +112,7 @@ class DCT:
         return dct_block
 
     @staticmethod
-    def getOriginalBlockFromQuantized(quantized_block):
+    def get_original_block_from_quantized(quantized_block: np.ndarray) -> np.ndarray:
         """
         Inverse of "getQuantizedBlock".
         :param quantized_block: Quantized 8x8 block of pixels [NUMPY NDARRAY]
@@ -124,7 +125,7 @@ class DCT:
 
     # LENGTH EMBED/EXTRACT METHODS ====================================================
 
-    def lengthToBinary(self):
+    def length_to_binary(self) -> list:
         """
         Gives binary form of the length and adds a separator to that representation.
         :return: Binary representation of the length + separator to embed [LIST OF STR]
@@ -132,14 +133,15 @@ class DCT:
         if self.__message_length_ % 8 != 0:
             raise ValueError("Message length is not multiple of 8")
         msg_length = int(
-            self.__message_length_ / 8)  # Decimal representation of the length
+            self.__message_length_ / 8
+        )  # Decimal representation of the length
         n_required_bits = msg_length.bit_length()
         tmp = f"0{n_required_bits}b"
         binary_length = format(msg_length, tmp)
-        return list(binary_length) + utils.stringToBinary(
+        return list(binary_length) + utils.string_to_binary(
             settings.LENGTH_MSG_SEPARATOR)
 
-    def embedMsglength(self):
+    def embed_msg_length(self):
         """
         Inserts the length of the message and end symbol (in binary form)
         at the beginning of the picture.
@@ -147,9 +149,9 @@ class DCT:
         as list of blocks of pixels (from top left to bottom right) [LIST OF
                                                                     NUMPY NDARRAY]
         """
-        mess_len_to_binary = self.lengthToBinary()
+        mess_len_to_binary = self.length_to_binary()
         for block_index, length_bit_to_embed in enumerate(mess_len_to_binary):
-            quantized_block = self.getQuantizedBlock(
+            quantized_block = self.quantize_block(
                 self.__block_list_[block_index])
             if quantized_block[0][0] % 2 == 1 and int(length_bit_to_embed) == 0:
                 quantized_block[0][0] -= 1
@@ -157,24 +159,23 @@ class DCT:
                     length_bit_to_embed) == 1:
                 quantized_block[0][0] += 1
             self.__block_list_[
-                block_index] = self.getOriginalBlockFromQuantized(
+                block_index] = self.get_original_block_from_quantized(
                 quantized_block)
 
     @staticmethod
-    def extractMsglength(img, width):
+    def extract_msg_length(img: np.ndarray) -> int:
         """
         Extracts the length (in bits) of the message embedded in the stegoimage.
         :param img: Stegoimage from which to extract the message [NUMPY NDARRAY]
-        :param width: Width of the stegoimage [INT]
-        :return: length of the message to extract from the stegoimage [INT]
+        :return: Length of the message to extract from the stegoimage [INT]
         """
         block_index = 0
         separator_found = False
         decoded_length = ""
         while (not separator_found) and (
                 block_index < settings.MAX_BITS_TO_ENCODE_LENGTH):
-            block = utils.getBlockFromBlockIndex(img, width, block_index)
-            unquantized_block = DCT.getQuantizedBlock(block)
+            block = utils.extract_block_from_image(img, block_index)
+            unquantized_block = DCT.quantize_block(block)
             decoded_length += str(int(unquantized_block[0][0] % 2))
             if len(decoded_length) > 8:
                 current_letter = str(chr(int(decoded_length[-8:], 2)))
@@ -186,7 +187,10 @@ class DCT:
     # ENCODE/DECODE MESSAGE METHODS ===================================================
 
     @staticmethod
-    def getRandomBlocksFromMsgLength(seed, binary_msg_length, height, width):
+    def get_random_blocks_from_msg_length(seed: int,
+                                          binary_msg_length: int,
+                                          height: int,
+                                          width: int) -> list:
         """
         Generates a random sequence of indices, (interpreted as the position
         of bits of the message to embed/extract in/from the cover/stegoimage.
@@ -195,7 +199,7 @@ class DCT:
                                   from the stegoimage [INT]
         :param height: Height of the cover/stegoimage [INT]
         :param width: Width of the cover/stegoimage [INT]
-        :return: List of indeces [LIST OF INT]
+        :return: List of indexes [LIST OF INT]
         """
         tot_blocks = height * width // 64
         random.seed(seed)
@@ -204,7 +208,7 @@ class DCT:
             binary_msg_length)
         return chosen_blocks_indices
 
-    def encode_r(self, output_path, seed):
+    def encode_r(self, output_path: str, seed: int) -> np.ndarray:
         """
         Embed message into cover image:
         1 - Embed the length.
@@ -216,16 +220,16 @@ class DCT:
         :param seed: Chosen seed [INT]
         :return: Stegoimage [NUMPY NDARRAY]
         """
-        y, cr, cb = utils.getYCrCbFromOriginalImg(self.__cover_image_)
+        y, cr, cb = utils.get_YCrCb_from_original_img(self.__cover_image_)
         mess_len = len(self.__cipher_text_)
-        positions_lst = self.getRandomBlocksFromMsgLength(seed, mess_len * 8,
-                                                          self.__height_, self.__width_)
-        self.__block_list_ = self.breakImageIntoBlocks(cb, self.__height_,
-                                                       self.__width_)
-        self.embedMsglength()
+        positions_lst = self.get_random_blocks_from_msg_length(seed, mess_len * 8,
+                                                               self.__height_,
+                                                               self.__width_)
+        self.__block_list_ = self.break_image_into_blocks(cb)
+        self.embed_msg_length()
         for message_index, block_index in enumerate(positions_lst):
             block = self.__block_list_[block_index]
-            dct_block = self.getQuantizedBlock(block)
+            dct_block = self.quantize_block(block)
             coeff = int(dct_block[0][0])
 
             message_bit = self.__bin_message_[message_index]
@@ -234,18 +238,18 @@ class DCT:
             elif (coeff % 2) == 0 and int(message_bit) == 1:
                 dct_block[0][0] += 1
 
-            self.__block_list_[
-                block_index] = self.getOriginalBlockFromQuantized(
-                dct_block)
-        modified_cb = self.recomposeImage()
-        final_img_standard_format = utils.getOriginalImgFromYCrCb(y,
-                                                                  cr,
-                                                                  modified_cb)
+            self.__block_list_[block_index] = self.get_original_block_from_quantized(
+                dct_block
+            )
+        modified_cb = self.recompose_image()
+        final_img_standard_format = utils.get_original_img_from_YCrCb(y,
+                                                                      cr,
+                                                                      modified_cb)
         cv2.imwrite(output_path, final_img_standard_format)
         return final_img_standard_format
 
     @staticmethod
-    def decode_r(setego_img_path, seed):
+    def decode_r(setego_img_path: str, seed: int) -> bytes:
         """
         Extract a message from a stegoimage:
         1 - Extract the length of the message.
@@ -256,18 +260,18 @@ class DCT:
         :param seed: Chosen seed [INT]
         :return: Message hidden in the stegoimage [BYTE STR]
         """
-        original_stego_img = utils.getImage(setego_img_path)
-        _, _, cb = utils.getYCrCbFromOriginalImg(original_stego_img)
+        original_stego_img = utils.get_image(setego_img_path)
+        _, _, cb = utils.get_YCrCb_from_original_img(original_stego_img)
         height, width = original_stego_img.shape[:2]
-        msg_length = DCT.extractMsglength(cb, width)
-        positions_lst = DCT.getRandomBlocksFromMsgLength(
+        msg_length = DCT.extract_msg_length(cb)
+        positions_lst = DCT.get_random_blocks_from_msg_length(
             seed, msg_length, height, width)
         decoded_msg = "0b"
-        block_list = DCT.breakImageIntoBlocks(cb, height, width)
+        block_list = DCT.break_image_into_blocks(cb)
         for message_index, block_index in enumerate(positions_lst):
             block_index = positions_lst[message_index]
             block = block_list[block_index]
-            dct_block = DCT.getQuantizedBlock(block)
+            dct_block = DCT.quantize_block(block)
             coeff = int(dct_block[0][0])
             decoded_msg += str(
                 coeff % 2)  # Adding to the message the currently read bit
@@ -275,12 +279,12 @@ class DCT:
 
 
 if __name__ == "__main__":
-    from EncryptionUtils import encryptMessage, decryptMessage
+    from EncryptionUtils import encrypt_message, decrypt_message
 
     message = "HELLO THIS IS A LONG MESSAGE"
-    encrypted = encryptMessage(message, "password")
+    encrypted = encrypt_message(message, "password")
     d = DCT("data/test_image.jpg", encrypted)
     encoded = d.encode_r("data/ycrcb_output.png", 20)
     decoded = DCT.decode_r("data/ycrcb_output.png", 20)
-    decoded_message = decryptMessage(decoded, "password")
+    decoded_message = decrypt_message(decoded, "password")
     print(decoded_message)
