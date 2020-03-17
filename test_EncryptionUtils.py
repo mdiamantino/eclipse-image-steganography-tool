@@ -15,7 +15,7 @@ def testApplication(num_tests):
         message_to_encrypt = randomString(random.randint(1, 1000))
         password = randomString(random.randint(1, 40))
         res = encryptMessage(message_to_encrypt, password)
-        assert (message_to_encrypt == decryptMessage(res, password))
+        assert message_to_encrypt == decryptMessage(res, password)
 
 
 class Test(TestCase):

@@ -82,14 +82,17 @@ MAX_HUE_SATURATION = 20
 MIN_CONTRAST = 0.5
 MAX_CONTRAST = 2.0
 
-# Superpixels : Completely or partially transform images to their superpixel representation.
+# Superpixels : Completely or partially transform images
+# to their superpixel representation.
 MIN_SUPERPIXELS_PER_IMAGE = 1
 MAX_SUPERPIXELS_PER_IMAGE = 10
-# Replace each superpixel with a probability between 0 and 100% (sampled once per image) by its average pixel color.
+# Replace each superpixel with a probability between 0 and 100%
+# (sampled once per image) by its average pixel color.
 MIN_P_REPLACE_SUPERPIXEL = 0
 MAX_P_REPLACE_SUPERPIXEL = 0.1
 
-# PiecewiseAffine : Apply affine transformations that differ between local neighbourhoods.
+# PiecewiseAffine : Apply affine transformations
+# that differ between local neighbourhoods.
 MIN_PIECEWISE_SCALE = 0.01
 MAX_PIECEWISE_SCALE = 0.05
 

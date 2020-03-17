@@ -3,8 +3,8 @@ import imgaug.augmenters as iaa
 
 import settings as st
 
-sometimes = lambda aug: iaa.Sometimes(0.8, aug)
-
+def sometimes(aug):
+    return iaa.Sometimes(0.8, aug)
 
 class ImageAugmentor:
     def __init__(self, img):
@@ -35,7 +35,8 @@ class ImageAugmentor:
                     cval=(0, 255),
                     # if mode is constant, use a cval between 0 and 255
                     mode=ia.ALL
-                    # use any of scikit-image's warping modes (see 2nd image from the top for examples)
+                    # use any of scikit-image's warping modes
+                    # (see 2nd image from the top for examples)
                 )),
                 # execute 0 to 5 of the following (less important) augmenters per image
                 # don't execute all of them, as that would often be way too strong
@@ -55,7 +56,8 @@ class ImageAugmentor:
                                    # blur images
                                    iaa.AverageBlur(k=(st.MIN_LOCAL_BLUR_SIZE,
                                                       st.MAX_LOCAL_BLUR_SIZE)),
-                                   # blur image using local means with kernel sizes between 2 and 7
+                                   # blur image using local means
+                                   # with kernel sizes between 2 and 7
                                    iaa.MedianBlur(k=(3, 11)),
                                ]),
                                iaa.Sharpen(alpha=(
@@ -67,7 +69,8 @@ class ImageAugmentor:
                                    strength=(0, 2.0)),
                                # emboss images
                                # search either for all edges or for directed edges,
-                               # blend the result with the original image using a blobby mask
+                               # blend the result with the original image
+                               # using a blobby mask
                                iaa.SimplexNoiseAlpha(iaa.OneOf([
                                    iaa.EdgeDetect(alpha=(
                                        st.MIN_EDGE_DETECTION_ALPHA,
@@ -96,8 +99,9 @@ class ImageAugmentor:
                                iaa.AddToHueAndSaturation((st.MIN_HUE_SATURATION,
                                                           st.MAX_HUE_SATURATION)),
                                # change hue and saturation
-                               # either change the brightness of the whole image (sometimes
-                               # per channel) or change the brightness of subareas
+                               # either change the brightness of the whole image
+                               # (sometimes per channel)
+                               # or change the brightness of subareas
                                iaa.OneOf([
                                    iaa.Multiply((0.5, 1.5), per_channel=0.5),
                                    iaa.FrequencyNoiseAlpha(

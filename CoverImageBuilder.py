@@ -1,4 +1,5 @@
 import subprocess
+from os.path import abspath
 
 import imageio
 
@@ -7,7 +8,7 @@ from ImageAugmentor import ImageAugmentor
 
 class CoverImageBuilder:
     def __init__(self, image_path):
-        self.__image_path_ = image_path
+        self.__image_path_ = abspath(image_path)
         self.__output_path_ = self.getOutputPath(self.__image_path_)
         self.__original_pic_ = imageio.imread(self.__image_path_)
         self.__augmentor_ = ImageAugmentor(self.__original_pic_)
@@ -19,11 +20,11 @@ class CoverImageBuilder:
             raise TypeError
         output = subprocess.run(['exiftool', '-all=', image_path],
                                 stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT)
+                                stderr=subprocess.STDOUT,
+                                shell=False)
         if output.stderr is not None:
             raise OSError
-        else:
-            return output.stdout.decode('utf-8')
+        return output.stdout.decode('utf-8')
 
     @staticmethod
     def getOutputPath(image_path: str):
