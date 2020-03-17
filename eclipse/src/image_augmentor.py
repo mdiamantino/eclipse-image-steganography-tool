@@ -142,6 +142,6 @@ class ImageAugmentor:
             random_order=True
         )
 
-    def getAugmentedImage(self):
+    def get_augmented_image(self):
         self.__augmented_pic_ = self.__seq_.augment_image(self.__original_pic_)
         return self.__augmented_pic_

@@ -49,7 +49,7 @@ class CoverImageBuilder:
         1) Performs augmentation
         2) Remove exifs
         """
-        augmented_img = self.__augmentor_.getAugmentedImage()
+        augmented_img = self.__augmentor_.get_augmented_image()
         imageio.imwrite(self.__output_path_, augmented_img)
         self.remove_exifs(self.__output_path_)
 

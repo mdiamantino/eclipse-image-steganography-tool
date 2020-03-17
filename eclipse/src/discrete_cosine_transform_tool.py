@@ -248,7 +248,7 @@ class DCT:
         return final_img_standard_format
 
     @staticmethod
-    def decode_r(setego_img_path: str, seed: int) -> bytes:
+    def decode_r(stego_img_path: str, seed: int) -> bytes:
         """
         Extract a message from a stegoimage:
         1 - Extract the length of the message.
@@ -259,7 +259,7 @@ class DCT:
         :param seed: Chosen seed [INT]
         :return: Message hidden in the stegoimage [BYTE STR]
         """
-        original_stego_img = utils.get_image(setego_img_path)
+        original_stego_img = utils.get_image(stego_img_path)
         _, _, cb = utils.get_YCrCb_from_original_img(original_stego_img)
         height, width = original_stego_img.shape[:2]
         msg_length = DCT.extract_msg_length(cb)
