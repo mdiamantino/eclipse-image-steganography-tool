@@ -257,7 +257,7 @@ class DCT:
         :return: Message hidden in the stegoimage [BYTE STR]
         """
         original_stego_img = utils.getImage(setego_img_path)
-        y, cr, cb = utils.getYCrCbFromOriginalImg(original_stego_img)
+        _, _, cb = utils.getYCrCbFromOriginalImg(original_stego_img)
         height, width = original_stego_img.shape[:2]
         msg_length = DCT.extractMsglength(cb, width)
         positions_lst = DCT.getRandomBlocksFromMsgLength(
