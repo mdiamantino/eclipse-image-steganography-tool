@@ -1,5 +1,4 @@
 __author__ = "Mark Diamantino Caribé"
-
 import zlib
 
 from Crypto.Cipher import AES
