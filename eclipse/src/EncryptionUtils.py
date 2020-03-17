@@ -57,15 +57,3 @@ def decrypt_message(cipher_message: bytes, password: str) -> str:
     pt = Fernet(key).decrypt(cipher_message[SALT_LEN:])
     original_message = zlib.decompress(pt)
     return original_message.decode('utf-8')
-
-
-if __name__ == "__main__":
-    salts = []
-    keys = []
-    for i in range(10):
-        salt = os.urandom(SALT_LEN)
-        key = gen_salted_key_from_password(salt, "pass")
-        salts.append(salt)
-        keys.append(key)
-    print(salts)
-    print(keys)
