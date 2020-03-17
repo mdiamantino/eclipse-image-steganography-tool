@@ -1,8 +1,8 @@
-import itertools
+from itertools import product
 import random
-import warnings
+from warnings import warn
 from os.path import abspath
-import cv2
+from cv2 import resize, imwrite, dct, idct
 import numpy as np
 from bitstring import BitArray
 
@@ -43,7 +43,7 @@ class DCT:
             warning = f"Message occupies ≈ " \
                       f"{purcentage_of_occupied_storage}% of the pic. " \
                       "A smaller text is preferred (< 10%)"
-            warnings.warn(warning)
+            warn(warning)
 
     def verify_and_apply_padding(self):
         """
@@ -54,10 +54,10 @@ class DCT:
         """
         original_height, original_width = self.__cover_image_.shape[:2]
         if original_height % 8 != 0 or original_width % 8 != 0:
-            self.__cover_image_ = cv2.resize(self.__cover_image_, (
+            self.__cover_image_ = resize(self.__cover_image_, (
                 original_width + (8 - original_width % 8),
                 original_height + (8 - original_height % 8)))
-            cv2.imwrite(self.__cover_image_path_, self.__cover_image_)
+            imwrite(self.__cover_image_path_, self.__cover_image_)
 
     # BREAK/RECOMPOSE METHODS =========================================================
 
@@ -73,8 +73,8 @@ class DCT:
             raise TypeError("Cannot break a non np.array image")
         height, width = len(img), len(img[0])
         return [img[j: j + 8, i: i + 8] for (j, i) in
-                itertools.product(range(0, height, 8),
-                                  range(0, width, 8))]
+                product(range(0, height, 8), range(0, width, 8))
+                ]
 
     def recompose_image(self) -> np.ndarray:
         """
@@ -105,7 +105,7 @@ class DCT:
         :return:Quantized 8x8 block of pixels [NUMPY NDARRAY]
         """
         img_block = np.subtract(block, 128)
-        dct_block = cv2.dct(img_block.astype(np.float64))
+        dct_block = dct(img_block.astype(np.float64))
         dct_block[0][0] /= settings.QUANTIZATION_TABLE[0][0]
         dct_block[0][0] = np.round(dct_block[0][0])
         return dct_block
@@ -119,7 +119,7 @@ class DCT:
         """
         dct_block = quantized_block
         dct_block[0][0] *= settings.QUANTIZATION_TABLE[0][0]
-        unquantized_block = cv2.idct(dct_block)
+        unquantized_block = idct(dct_block)
         return np.add(unquantized_block, 128)
 
     # LENGTH EMBED/EXTRACT METHODS ====================================================
@@ -244,7 +244,7 @@ class DCT:
         final_img_standard_format = utils.get_original_img_from_YCrCb(y,
                                                                       cr,
                                                                       modified_cb)
-        cv2.imwrite(output_path, final_img_standard_format)
+        imwrite(output_path, final_img_standard_format)
         return final_img_standard_format
 
     @staticmethod
@@ -278,12 +278,12 @@ class DCT:
 
 
 if __name__ == "__main__":
-    from eclipse.src.EncryptionUtils import encrypt_message, decrypt_message
+    from eclipse.src.encryption_utils import encrypt_message, decrypt_message
 
     message = "HELLO THIS IS A LONG MESSAGE"
     encrypted = encrypt_message(message, "password")
-    d = DCT("eclipse/data/test_image.jpg", encrypted)
-    encoded = d.encode_r("eclipse/data/ycrcb_output.png", 20)
-    decoded = DCT.decode_r("eclipse/data/ycrcb_output.png", 20)
+    d = DCT("eclipse/resources/test_image.jpg", encrypted)
+    encoded = d.encode_r("eclipse/resources/ycrcb_output.png", 20)
+    decoded = DCT.decode_r("eclipse/resources/ycrcb_output.png", 20)
     decoded_message = decrypt_message(decoded, "password")
     print(decoded_message)

@@ -1,8 +1,8 @@
 __author__ = "Mark Diamantino Caribé"
 
-import base64
-import os
-import zlib
+from base64 import urlsafe_b64encode
+from os import urandom
+from zlib import compress, decompress
 
 from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
@@ -26,7 +26,7 @@ def gen_salted_key_from_password(salt: bytes, password: str) -> bytes:
         iterations=COUNT,
         backend=default_backend()
     )
-    key = base64.urlsafe_b64encode(kdf.derive(password.encode()))
+    key = urlsafe_b64encode(kdf.derive(password.encode()))
     return key
 
 
@@ -38,8 +38,8 @@ def encrypt_message(message_to_encrypt: str, password: str) -> bytes:
     :return: Salt concatenated to the cipher message [STR]
     """
     encoded_to_encrypt = message_to_encrypt.encode('utf-8')
-    compressed_to_encrypt = zlib.compress(encoded_to_encrypt)
-    salt = os.urandom(SALT_LEN)
+    compressed_to_encrypt = compress(encoded_to_encrypt)
+    salt = urandom(SALT_LEN)
     key = gen_salted_key_from_password(salt, password)
     cipher = Fernet(key).encrypt(compressed_to_encrypt)
     return salt + cipher
@@ -55,5 +55,5 @@ def decrypt_message(cipher_message: bytes, password: str) -> str:
     key = gen_salted_key_from_password(salt=cipher_message[:SALT_LEN],
                                        password=password)
     pt = Fernet(key).decrypt(cipher_message[SALT_LEN:])
-    original_message = zlib.decompress(pt)
+    original_message = decompress(pt)
     return original_message.decode('utf-8')

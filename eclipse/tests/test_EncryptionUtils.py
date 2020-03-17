@@ -2,7 +2,7 @@ import random
 import string
 from unittest import TestCase
 
-from eclipse.src.EncryptionUtils import encrypt_message, decrypt_message
+from eclipse.src.encryption_utils import encrypt_message, decrypt_message
 
 
 def generate_random_string(string_length: int) -> str:
