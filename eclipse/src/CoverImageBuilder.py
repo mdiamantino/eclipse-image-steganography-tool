@@ -23,7 +23,7 @@ class CoverImageBuilder:
         """
         if image_path is None:
             raise TypeError
-        output = subprocess.run(['exiftool', '-all=', image_path],
+        output = subprocess.run(['/usr/bin/exiftool', '-all=', image_path],
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT,
                                 shell=False)
