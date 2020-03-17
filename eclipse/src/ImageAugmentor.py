@@ -1,7 +1,7 @@
 import imgaug as ia
 import imgaug.augmenters as iaa
 
-import settings as st
+from eclipse.common import settings as st
 
 
 def sometimes(aug: iaa):

@@ -3,7 +3,7 @@ from os.path import abspath
 
 import imageio
 
-from ImageAugmentor import ImageAugmentor
+from eclipse.src.ImageAugmentor import ImageAugmentor
 
 
 class CoverImageBuilder:
@@ -55,5 +55,5 @@ class CoverImageBuilder:
 
 
 if __name__ == "__main__":
-    ie = CoverImageBuilder("data/test_image.jpg")
+    ie = CoverImageBuilder("eclipse/data/test_image.jpg")
     ie.build_cover_image()

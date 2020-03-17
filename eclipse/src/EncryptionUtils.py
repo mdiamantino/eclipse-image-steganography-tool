@@ -9,7 +9,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-from settings import SALT_LEN, DK_LEN, COUNT
+from eclipse.common.settings import SALT_LEN, DK_LEN, COUNT
 
 
 def gen_salted_key_from_password(salt: bytes, password: str) -> bytes:

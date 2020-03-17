@@ -1,18 +1,17 @@
 import itertools
 import random
 import warnings
-
+from os.path import abspath
 import cv2
 import numpy as np
 from bitstring import BitArray
 
-import settings
-import utils
+from eclipse.common import settings, utils
 
 
 class DCT:
     def __init__(self, cover_image_path, cipher_msg):
-        self.__cover_image_path_ = cover_image_path
+        self.__cover_image_path_ = abspath(cover_image_path)
         self.__cover_image_ = utils.get_image(cover_image_path)
         self.verify_and_apply_padding()
         self.__height_, self.__width_ = self.__cover_image_.shape[:2]
@@ -279,12 +278,12 @@ class DCT:
 
 
 if __name__ == "__main__":
-    from EncryptionUtils import encrypt_message, decrypt_message
+    from eclipse.src.EncryptionUtils import encrypt_message, decrypt_message
 
     message = "HELLO THIS IS A LONG MESSAGE"
     encrypted = encrypt_message(message, "password")
-    d = DCT("data/test_image.jpg", encrypted)
-    encoded = d.encode_r("data/ycrcb_output.png", 20)
-    decoded = DCT.decode_r("data/ycrcb_output.png", 20)
+    d = DCT("eclipse/data/test_image.jpg", encrypted)
+    encoded = d.encode_r("eclipse/data/ycrcb_output.png", 20)
+    decoded = DCT.decode_r("eclipse/data/ycrcb_output.png", 20)
     decoded_message = decrypt_message(decoded, "password")
     print(decoded_message)

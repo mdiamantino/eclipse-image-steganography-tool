@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from EncryptionUtils import gen_salted_key_from_password
+from eclipse.src.EncryptionUtils import gen_salted_key_from_password
 
 
 class Test(TestCase):
