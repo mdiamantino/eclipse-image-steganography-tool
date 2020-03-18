@@ -1,5 +1,6 @@
 <img src="eclipse/resources/eclipse_icon.png" align="right" width="100"/>
 
+
 # Eclipse
 
 Eclipse is a **steganography tool** that can be used to hide or extract a message from a given image.
@@ -96,17 +97,21 @@ We use [SemVer](http://semver.org/) for versioning. For the versions available, 
 
 ## Authors
 
-* **Billie Thompson** - *Initial work* - [PurpleBooth](https://github.com/PurpleBooth)
+* **Mark Diamantino Caribé** - BA3 Computer Science - Université Libre de Bruxelles
+	* mdcaribe@protonmail.com
+	* mark.diamantino.caribe@ulb.ac.be
 
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
+See also the list of [contributors](https://github.com/mdiamantino/eclipse/contributors) who participated in this project.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
+This project is licensed under the *GNU AFFERO GENERAL PUBLIC LICENSE* - see the [LICENSE.txt](LICENSE.txt) file for details.
 
 ## Acknowledgments
 
 * Hat tip to anyone whose code was used
 * Inspiration
 * etc
+
+
 
