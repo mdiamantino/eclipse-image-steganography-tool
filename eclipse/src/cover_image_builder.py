@@ -14,6 +14,9 @@ class CoverImageBuilder:
         self.__augmentor_ = ImageAugmentor(self.__original_pic_)
         self.__img_ = self.__original_pic_
 
+    def get_output_path(self):
+        return self.__output_path_
+
     @staticmethod
     def remove_exifs(image_path: str) -> str:
         """

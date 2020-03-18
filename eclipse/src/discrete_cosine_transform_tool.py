@@ -207,7 +207,7 @@ class DCT:
             binary_msg_length)
         return chosen_blocks_indices
 
-    def encode_r(self, output_path: str, seed: int) -> np.ndarray:
+    def embed_msg(self, output_path: str, seed: int) -> np.ndarray:
         """
         Embed message into cover image:
         1 - Embed the length.
@@ -248,7 +248,7 @@ class DCT:
         return final_img_standard_format
 
     @staticmethod
-    def decode_r(stego_img_path: str, seed: int) -> bytes:
+    def extract_msg(stego_img_path: str, seed: int) -> bytes:
         """
         Extract a message from a stegoimage:
         1 - Extract the length of the message.
@@ -283,7 +283,7 @@ if __name__ == "__main__":
     message = "HELLO THIS IS A LONG MESSAGE"
     encrypted = encrypt_message(message, "password")
     d = DCT("eclipse/resources/test_image.jpg", encrypted)
-    encoded = d.encode_r("eclipse/resources/ycrcb_output.png", 20)
-    decoded = DCT.decode_r("eclipse/resources/ycrcb_output.png", 20)
+    encoded = d.embed_msg("eclipse/resources/ycrcb_output.png", 20)
+    decoded = DCT.extract_msg("eclipse/resources/ycrcb_output.png", 20)
     decoded_message = decrypt_message(decoded, "password")
     print(decoded_message)

@@ -1,5 +1,8 @@
+import subprocess
+
 import cv2
 import numpy
+from math import log10
 
 
 def get_image(img_path: str) -> numpy.ndarray:
@@ -68,3 +71,57 @@ def get_original_img_from_YCrCb(y: numpy.ndarray,
     ycrcb_format_img = cv2.merge((y, cr, cb))
     standard_format_img = cv2.cvtColor(ycrcb_format_img, cv2.COLOR_YCR_CB2BGR)
     return standard_format_img
+
+
+# COMPARISON UTILS ===================================================================
+
+def compute_mean_square_error(cover_image_path: str, stego_image_path: str) -> float:
+    """
+    Performs a byte by byte comparison of the two images.
+    :param cover_image_path: Path to cover image [STR]
+    :param stego_image_path: Path to stego image [STR]
+    :return: MSE unit:dB [FLOAT]
+    """
+    cover_image = cv2.imread(cover_image_path, cv2.IMREAD_GRAYSCALE)
+    stego_image = cv2.imread(stego_image_path, cv2.IMREAD_GRAYSCALE)
+    diff = numpy.sum(
+        (cover_image.astype("float") - stego_image.astype("float")) ** 2)
+    err = numpy.divide(diff, float(cover_image.shape[0] * cover_image.shape[1]))
+    return err
+
+
+def compute_peak_signal_to_noise_ratio(mean_square_error: float) -> float:
+    """
+    PSNR is used to measure the quality of reconstruction
+    of lossy compression techniques.
+    Larger the PSNR, the better the quality (less distortion).
+    :param mean_square_error: MSE unit:dB [FLOAT]
+    :return: Ratio of the maximum signal to noise in the stego image [dB]
+    """
+    return 10 * log10((255 ** 2) / mean_square_error)
+
+
+def compare_images(cover_image_path: str, stego_image_path: str) -> tuple:
+    """
+    Used to compare cover image (before embedding message)
+    and stegoimage (after message hidden).
+    It returns two comparison parameters:
+    1 - Mean square error: byte by byte comparison of the two images [FLOAT]
+    2 - PSNR (measures the quality of reconstruction of lossy compression) [FLOAT]
+    :param cover_image_path: Path to cover image [STR]
+    :param stego_image_path: Path to stegoimage [STR]
+    :return: Tuple of the mean square error and the peak signal to noise ratio [TUPLE]
+    """
+    mean_square_error = compute_mean_square_error(cover_image_path, stego_image_path)
+    peak_signal_to_noise_ratio = compute_peak_signal_to_noise_ratio(mean_square_error)
+    return (mean_square_error, peak_signal_to_noise_ratio)
+
+
+# CLI UTILS ===========================================================================
+
+def shredTraces(path_of_file_to_delete: str):
+    """
+    Securely erases files.
+    :param path_of_file_to_delete: Paths to files to delete
+    """
+    subprocess.check_call(['shred', '-zn', '10', '-u', path_of_file_to_delete])
