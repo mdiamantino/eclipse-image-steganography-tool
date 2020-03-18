@@ -8,20 +8,6 @@ from eclipse.src.cover_image_builder import CoverImageBuilder
 from eclipse.src.discrete_cosine_transform_tool import DCT
 from eclipse.src.encryption_utils import encrypt_message, decrypt_message
 
-
-def extract(stego_img_path: str, password: str, seed: int) -> str:
-    """
-    Extract the hidden message from the stegoimage.
-    :param stego_img_path: Path to the stego image [STR]
-    :param password: Password the message was encrypted with [STR]
-    :param seed: Chosen seed [INT]
-    :return: Extracted and decrypted message [STR]
-    """
-    extracted_encrypted_message = DCT.extract_msg(stego_img_path, seed)
-    decrypted_message = decrypt_message(extracted_encrypted_message, password)
-    return decrypted_message
-
-
 def embed(original_image_path: str,
           stego_image_output_path: str,
           message: str,
@@ -44,7 +30,20 @@ def embed(original_image_path: str,
     return cover_image_path
 
 
-def command_line_interface_main():
+def extract(stego_img_path: str, password: str, chosen_seed: int) -> str:
+    """
+    Extract the hidden message from the stegoimage.
+    :param stego_img_path: Path to the stego image [STR]
+    :param password: Password the message was encrypted with [STR]
+    :param chosen_seed: Chosen seed [INT]
+    :return: Extracted and decrypted message [STR]
+    """
+    extracted_encrypted_message = DCT.extract_msg(stego_img_path, chosen_seed)
+    decrypted_message = decrypt_message(extracted_encrypted_message, password)
+    return decrypted_message
+
+
+def interactive_cli():
     # Main operations
     operation_answer = prompt(cli_q.operation_questions)
     if operation_answer["operation"] == "Embed message":
@@ -72,7 +71,7 @@ def command_line_interface_main():
         extract_answers = prompt(cli_q.extract_questions)
         message = extract(stego_img_path=extract_answers['stego_img_path'],
                           password=extract_answers['password'],
-                          seed=extract_answers['seed'])
+                          chosen_seed=extract_answers['seed'])
         print("[*] Extracted hidden message: '%s'" % message)
 
         if prompt(cli_q.save_message_question)['save_message']:
