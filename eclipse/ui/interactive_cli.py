@@ -22,7 +22,6 @@ def interactive_cli():
             chosen_seed=extract_answers['seed'])
         print("[*] Message successfully hidden in the image")
 
-        # Deleting
         shred_answers = prompt(cli_q.shred_questions)
         if shred_answers['shred_original_image']:
             shred_traces(path_of_file_to_delete=extract_answers['original_image_path'])
@@ -42,6 +41,7 @@ def interactive_cli():
             msg_path = prompt(cli_q.save_path_question)['message_path']
             with open(msg_path, 'w') as message_file:
                 message_file.write(message)
+            print('[*] Message successfully written at %s' % msg_path)
         if prompt(cli_q.delete_stego_image_question)['shred_stego_image']:
             # Deleting
             shred_traces(extract_answers['stego_img_path'])

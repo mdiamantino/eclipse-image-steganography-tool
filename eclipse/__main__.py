@@ -17,8 +17,9 @@ Options:
   -h, --help    Show this screen.
   --version     Show version.
 """
-from pyfiglet import Figlet
 from docopt import docopt
+from pyfiglet import Figlet
+
 from eclipse.ui.main_cli import main
 
 if __name__ == "__main__":
