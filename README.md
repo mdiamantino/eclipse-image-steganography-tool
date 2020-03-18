@@ -1,4 +1,4 @@
-
+<img src="eclipse/resources/eclipse_icon.png" align="right" />
 
 # Eclipse
 
