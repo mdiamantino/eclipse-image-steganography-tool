@@ -8,6 +8,7 @@ setuptools.setup(
     version="0.0.1",
     author="Mark Diamantino Caribé",
     author_email="mdcaribe@protonmail.com",
+    license="GNU AFFERO GENERAL PUBLIC LICENSE",
     description="A steganography tool based on discrete cosine transform and image augmentation",
     long_description=long_description,
     long_description_content_type="text/markdown",
