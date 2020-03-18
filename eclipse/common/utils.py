@@ -119,7 +119,7 @@ def compare_images(cover_image_path: str, stego_image_path: str) -> tuple:
 
 # CLI UTILS ===========================================================================
 
-def shredTraces(path_of_file_to_delete: str):
+def shred_traces(path_of_file_to_delete: str):
     """
     Securely erases files.
     :param path_of_file_to_delete: Paths to files to delete
