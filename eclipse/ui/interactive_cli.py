@@ -4,7 +4,7 @@ from PyInquirer import prompt
 
 import eclipse.ui.cli_questions as cli_q
 from eclipse.common.utils import shred_traces
-from eclipse.backend import embed, extract
+from eclipse.src.backend import embed, extract
 
 
 def interactive_cli():
@@ -40,7 +40,7 @@ def interactive_cli():
         if prompt(cli_q.save_message_question)['save_message']:
             msg_path = prompt(cli_q.save_path_question)['message_path']
             with open(msg_path, 'w') as message_file:
-                message_file.write(message)
+                message_file.write(message+'\n')
             print('[*] Message successfully written at %s' % msg_path)
         if prompt(cli_q.delete_stego_image_question)['shred_stego_image']:
             # Deleting

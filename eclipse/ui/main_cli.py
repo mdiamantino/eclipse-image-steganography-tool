@@ -1,6 +1,6 @@
 import getpass
 
-from eclipse import backend
+from eclipse.src import backend
 from eclipse.common.utils import shred_traces
 from eclipse.ui.interactive_cli import interactive_cli
 
@@ -38,4 +38,5 @@ def main(arguments):
                 print("[!] Original image and cover image deleted permanently")
             if arguments['--output']:
                 with open(arguments['--output'], 'w') as message_file:
-                    message_file.write(retrieved_message)
+                    message_file.write(retrieved_message+'\n')
+
