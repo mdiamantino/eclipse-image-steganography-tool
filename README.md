@@ -9,7 +9,7 @@ Eclipse is a **steganography command-line tool** (and module) that can be used t
 *Eclipse* aims to be an **efficient tool** for image steganography, combining different concepts of computer science, such as **cryptography**, **compression** and **machine learning**.
 
 ## How it works
-In contrast to secure communication, where an encrypted message is exchanged publicly, the main goal of steganography is to hide the message, so is difficult to detect the transfer and in worst case scenario, even more challenging retrieving the original message. Hence the exchange goes **unnoticed**.
+In contrast to secure communication, where an encrypted message is exchanged publicly, the main goal of steganography is to hide the message, so it is difficult to detect the transfer and in a worst case scenario, even more challenging retrieving the original message. Hence the exchange goes **unnoticed**.
 
 ![Eclipse Diagram](eclipse/resources/eclipse_diagram.png)
 
@@ -17,18 +17,18 @@ In contrast to secure communication, where an encrypted message is exchanged pub
 In order to achieve a reasonable efficiency and security level, *Eclipse* focuses on three fundamentals:
 - **Avoiding image comparison** at  all costs:
 	- **Why:** If the *stego-image* (the one containing the hidden message) can be compared to the *cover image* (the one without), differences could encourage inspections.
-	- **How:**  *Eclipse* avoids, as far as possible, that the cover-image using two tools of **machine learning**:
-		- **Image Augmentation**: The message is never hidden in the original image. Instead, *Eclipse* performs **random transformations** on it so that it could be really hard to generate the same image again and compare it to the stego-image;
+	- **How:**  *Eclipse* avoids, as far as possible, the comparison using two tools of **machine learning**:
+		- **Image Augmentation**: The message is never hidden in the original image. Instead, *Eclipse* performs **random transformations** on the image, so that it could be really hard to generate the same image again and compare it to the stego-image;
 		- **Black-box adversarial attack** *[feature under development]*: Image recognition tools could be used to search for the original image (and eventually proceed to brute-force the above-mentioned point). *Eclipse* aims to perform black-box adversarial attacks, so most of image recognition systems would misidentify the possible stego-image.
-		- **Metadata suppression**:*Eclipse* deletes all EXIFS, in order to discourage image traceability such as **GPS coordinates**, **origin**, **author** and so forth.
+		- **Metadata suppression**: *Eclipse* deletes all EXIF, in order to discourage image traceability such as **GPS coordinates**, **origin**, **author** and so forth.
 - **Minimizing differences** between the two images:
 	- **Why:**  If *Eclipse* fails the first point and the original cover-image is found,  then it is crucial that differences are negligible and imperceptible, so that they could be easily associated to eventual transfer/compression operations.
 	- **How:**  
-		- *Eclipse* steganography technique is based on **discrete cosine transform**, which compared to the standard LSB technique, is **far more robust, safe and imperceptible**. In addition, the technique has been modified so that the message is hidden only **one bit/highest coefficient** -in order to reduce machine perceptibility- and exclusively in the **Cb is blue minus luma** component -which is the worst noticed by the human eye.
+		- *Eclipse* steganography technique is based on **discrete cosine transform**, which compared to the standard LSB technique, is **far more robust, safe and imperceptible**. In addition, the technique has been modified so that the message is hidden only **one bit/highest coefficient** -in order to reduce machine perceptibility- and exclusively in the **blue minus luma** component -which is the worst noticed by the human eye.
 		- The message is **randomly and uniformly distributed** in the image.
 - **Message encryption**:
-	- **Why**: When the first to points fail, the original message needs to be unreadable.
-	- **How**: The message is still safe because it is encrypted with one of the strongest nowadays known algorithms, **AES-256-CBC**.
+	- **Why**: When the first two points fail, the original message needs to be unreadable.
+	- **How**: The message is still safe because it is encrypted with one of the strongest known algorithms at present, **AES-256-CBC**.
 
 ## Getting Started
 
