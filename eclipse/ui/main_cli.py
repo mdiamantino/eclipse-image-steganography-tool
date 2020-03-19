@@ -1,11 +1,15 @@
 import getpass
 
-from eclipse.src import backend
 from eclipse.common.utils import shred_traces
+from eclipse.src import backend
 from eclipse.ui.interactive_cli import interactive_cli
 
 
-def main(arguments):
+def main(arguments : dict):
+    """
+    Run the main application as command line tool
+    :param arguments: Dictionary of arguments
+    """
     if arguments['--interactive']:
         interactive_cli()
     else:
@@ -38,5 +42,4 @@ def main(arguments):
                 print("[!] Original image and cover image deleted permanently")
             if arguments['--output']:
                 with open(arguments['--output'], 'w') as message_file:
-                    message_file.write(retrieved_message+'\n')
-
+                    message_file.write(retrieved_message + '\n')

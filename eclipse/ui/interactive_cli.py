@@ -8,6 +8,9 @@ from eclipse.src.backend import embed, extract
 
 
 def interactive_cli():
+    """
+    Run interactive command-line tool
+    """
     # Main operations
     operation_answer = prompt(cli_q.operation_questions)
     if operation_answer["operation"] == "Embed message":
