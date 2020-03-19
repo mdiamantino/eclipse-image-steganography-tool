@@ -14,6 +14,17 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/mdiamantino/eclipse",
     packages=setuptools.find_packages(),
+    install_requires=[
+        'imageio',
+        'cryptography',
+        'docopt',
+        'pyfiglet',
+        'bitstring',
+        'opencv_python',
+        'imgaug',
+        'numpy',
+        'PyInquirer',
+    ],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

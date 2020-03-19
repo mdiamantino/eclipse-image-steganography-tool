@@ -44,10 +44,10 @@ Other packages will be automatically installed through the following instruction
 
 ### Installing
 
-First download the repository, and run:
+Run the following command in the root directory of *Eclipse*:
 
 ```
-python3 setup.py install
+pip3 install -e .
 ```
 
 ## Running Eclipse
