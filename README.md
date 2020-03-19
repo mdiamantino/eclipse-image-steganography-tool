@@ -3,22 +3,25 @@
 
 # Eclipse
 
-Eclipse is a **steganography tool** that can be used to hide or extract a message from a given image.
+Eclipse is a **steganography command-line tool** (and module) that can be used to hide and extract messages from images.
 
 ## Goal
-*Eclipse* aims to be an **efficient tool** for image steganography combining different concepts of computer science, such as **cryptography**, **compression** and **machine learning**.
+*Eclipse* aims to be an **efficient tool** for image steganography, combining different concepts of computer science, such as **cryptography**, **compression** and **machine learning**.
 
-## Detailed Principle
-In contrast to secure communication, where an encrypted message is clearly exhchanged, the main goal of a steganography image is to let the exchange **go unnoticed**, so that it is difficult to detect the transfer of a message and even more challenging retrieving it.
+## How it works
+In contrast to secure communication, where an encrypted message is exhchanged pubblically, the main goal of steganography is to hide the message, so is difficult to detect the transfer and in worst case scenario, even more challenging retrieving the original message. Hence the exchange goes **unnoticed**.
 
+![Eclipse Diagram](eclipse/resources/eclipse_diagram.png)
+
+### Detailed description
 In order to achieve a rasonable efficiency and securety level, *Eclipse* focuses on three foundamentals:
-- **Avoiding image comparison** at  all costs: 
+- **Avoiding image comparison** at  all costs:
 	- **Why:** If the *stego image* (the one containg the hidden message) can be compared to the *cover image* (the one without), differences could encourage inspections.
 	- **How:**  *Eclipse* avoids, as far as possible, that the coverimage using two tools of **machine learning**:
 		- **Image Augmentation**: The message is never hidden in the original image. Instead, *Eclipse* performs **random transformations** on it so that it could be really hard to generate the same image again and compare it to the stegoimage;
-		- **Black-box adversarial attack** *[feature under developement]*: Image recognition tools could be used to search for the original image (and eventually proceed to bruteforce the above-mentioned point). *Eclipse* aims to black-box adversarial attacks, so most of image recognition systems would misidentify the possible stegoimage.
+		- **Black-box adversarial attack** *[feature under developement]*: Image recognition tools could be used to search for the original image (and eventually proceed to bruteforce the above-mentioned point). *Eclipse* aims to perform black-box adversarial attacks, so most of image recognition systems would misidentify the possible stegoimage.
 		- **Metadata suppression**:*Eclipse* deletes all EXIFS, in order to discourage image traceability such as **GPS coordinates**, **origin**, **author** and so forth.
-- **Minimizing differences** between the two images: 
+- **Minimizing differences** between the two images:
 	- **Why:**  If *Eclipse* fails the first point and the original cover-image is found,  then it is crucial that differences are negligeable and imperceptibles, so that they could be easily associated to eventual transfer/compression operations.
 	- **How:**  
 		- *Eclipse* steganography technique is based on **discrete cosine transform**, which compared to the standard LSB technique, is **far more robust, safe and imperceptible**. In addition, the technique has been modified so that the message is hidden only **one bit/highest coefficient** -in order to reduce machine perceptibility- and exclusively in the **Cb is blue minus luma** component -which is the worst noticed by the humain eye.
@@ -29,71 +32,78 @@ In order to achieve a rasonable efficiency and securety level, *Eclipse* focuses
 
 ## Getting Started
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
-
 ### Prerequisites
 
-What things you need to install the software and how to install them
+*Eclipse* requires the excellent command line tool **ExifTool** by *Phil Harvey*.
 
 ```
-Give examples
+sudo apt update
+sudo apt install -y exiftool
 ```
+Other packages will be automatically installed through the following instructions.
 
 ### Installing
 
-A step by step series of examples that tell you how to get a development env running
-
-Say what the step will be
+First download the repository, and run:
 
 ```
-Give the example
+python3 setup.py install
 ```
 
-And repeat
-
+## Running Eclipse
+You can use *Eclipse* in three different ways:
+### As **Interactive Command-Line tool**:
 ```
-until finished
+python3 -m eclipse --interactive
 ```
+![Screen1](eclipse/resources/screen1.png)
 
-End with an example of getting some data out of the system or using it for a little demo
+![Screen2](eclipse/resources/screen2.png)
+
+
+### As **standard Command-Line tool**:
+#### Hiding mode
+```
+python3 -m eclipse hide [--stealthy] --image <image-path> --message <message-txt> --code <seed> --output <path>
+```
+Example:
+```
+python3 -m eclipse hide -i "eclipse/resources/test_image.jpg" -m "SECRET MESSAGE" -c 20 -o "eclipse/resources/stego_image.png"
+```
+You will be asked to prompt a password (in this example "password" was used).
+#### Message extracting mode
+```
+python3 -m eclipse eclipse extract [--stealthy | --output <path>] --image <image-path> --code <seed>
+```
+Example:
+```
+python3 -m eclipse extract -i "eclipse/resources/stego_image.png" -c 20
+```
+You will be asked to prompt the password used before.
+
+### As **module**:
+```
+from eclipse.src.backend import encrypt_message, decrypt_message
+```
+Refers to **documentation** for the usage of single functions and methods.
+
+### Help:
+For help, type:
+```
+python3 -m eclipse -h
+```
+![Screen3](eclipse/resources/screen3.png)
+
 
 ## Running the tests
 
-Explain how to run the automated tests for this system
+Tests are now under developement, if you want to contribute, please read the section **Contributing**.
 
-### Break down into end to end tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
-
-### And coding style tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
-
-## Deployment
-
-Add additional notes about how to deploy this on a live system
-
-## Built With
-
-* [Dropwizard](http://www.dropwizard.io/1.0.2/docs/) - The web framework used
-* [Maven](https://maven.apache.org/) - Dependency Management
-* [ROME](https://rometools.github.io/rome/) - Used to generate RSS Feeds
 
 ## Contributing
 
-Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us.
+Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on the code of conduct, and the process for submitting pull requests to us.
 
-## Versioning
-
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags). 
 
 ## Authors
 
@@ -108,10 +118,3 @@ See also the list of [contributors](https://github.com/mdiamantino/eclipse/contr
 This project is licensed under the *GNU AFFERO GENERAL PUBLIC LICENSE* - see the [LICENSE.txt](LICENSE.txt) file for details.
 
 ## Acknowledgments
-
-* Hat tip to anyone whose code was used
-* Inspiration
-* etc
-
-
-
