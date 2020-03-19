@@ -2,6 +2,10 @@ __author__ = "Mark Diamantino Caribé"
 
 import numpy as np
 
+ORIGINAL_IMAGE_PATH_DOES_NOT_EXISTS = -601
+OUTPUT_IMAGE_PATH_DOES_NOT_EXISTS = -602
+COULD_NOT_DECRYPT = -101
+
 SALT_LEN = 32
 DK_LEN = 32
 COUNT = 100000

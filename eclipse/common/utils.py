@@ -1,8 +1,17 @@
 import subprocess
+from math import log10
+from os import path
 
 import cv2
 import numpy
-from math import log10
+
+
+def image_exists(path_):
+    return path.exists(path_) and path.isfile(path_)
+
+
+def is_a_good_place(path_):
+    return path.exists(path.dirname(path_))
 
 
 def get_image(img_path: str) -> numpy.ndarray:

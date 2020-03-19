@@ -4,12 +4,12 @@ from base64 import urlsafe_b64encode
 from os import urandom
 from zlib import compress, decompress
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-from eclipse.common.settings import SALT_LEN, DK_LEN, COUNT
+from eclipse.common.settings import SALT_LEN, DK_LEN, COUNT, COULD_NOT_DECRYPT
 
 
 def gen_salted_key_from_password(salt: bytes, password: str) -> bytes:
@@ -45,15 +45,19 @@ def encrypt_message(message_to_encrypt: str, password: str) -> bytes:
     return salt + cipher
 
 
-def decrypt_message(cipher_message: bytes, password: str) -> str:
+def decrypt_message(cipher_message: bytes, password: str):
     """
     Decrypts a cipher given the password.
     :param cipher_message: Salt concatenated to the cipher message [STR]
     :param password: Password from which key will be derived [STR]
     :return: Decrypted message [STR]
+    or settings.COULD_NOT_DECRYPT if could not decrypt
     """
     key = gen_salted_key_from_password(salt=cipher_message[:SALT_LEN],
                                        password=password)
-    pt = Fernet(key).decrypt(cipher_message[SALT_LEN:])
-    original_message = decompress(pt)
-    return original_message.decode('utf-8')
+    try:
+        pt = Fernet(key).decrypt(cipher_message[SALT_LEN:])
+        original_message = decompress(pt).decode('utf-8')
+    except InvalidToken:
+        return COULD_NOT_DECRYPT
+    return original_message

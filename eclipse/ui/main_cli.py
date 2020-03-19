@@ -3,7 +3,7 @@ import getpass
 from eclipse.common.utils import shred_traces
 from eclipse.src import backend
 from eclipse.ui.interactive_cli import interactive_cli
-
+import eclipse.common.settings as error_codes
 
 def main(arguments : dict):
     """
@@ -26,6 +26,12 @@ def main(arguments : dict):
                                              message=message_to_hide,
                                              password=password,
                                              chosen_seed=repartition_code)
+            if cover_image_path == error_codes.ORIGINAL_IMAGE_PATH_DOES_NOT_EXISTS:
+                print("[! ERROR !] Original image path is not correct")
+                return
+            elif cover_image_path == error_codes.OUTPUT_IMAGE_PATH_DOES_NOT_EXISTS:
+                print("[! ERROR !] Output path is not a valid path")
+                return
             print("[*] Message successfully hidden in the image")
             if arguments['--stealthy']:
                 shred_traces(path_of_file_to_delete=image_path)
@@ -36,6 +42,13 @@ def main(arguments : dict):
             retrieved_message = backend.extract(stego_img_path=image_path,
                                                 password=password,
                                                 chosen_seed=repartition_code)
+            if retrieved_message == error_codes.COULD_NOT_DECRYPT:
+                # ERROR: Could not decrypt message
+                print("[! ERROR !] Could not decrypt the message.")
+                return
+            elif retrieved_message == error_codes.ORIGINAL_IMAGE_PATH_DOES_NOT_EXISTS:
+                print("[! ERROR !] Image path is not correct")
+                return
             print("[*] Extracted hidden message: '%s'" % retrieved_message)
             if arguments['--stealthy']:
                 shred_traces(path_of_file_to_delete=image_path)
@@ -43,3 +56,4 @@ def main(arguments : dict):
             if arguments['--output']:
                 with open(arguments['--output'], 'w') as message_file:
                     message_file.write(retrieved_message + '\n')
+

@@ -5,7 +5,7 @@ from PyInquirer import prompt
 import eclipse.ui.cli_questions as cli_q
 from eclipse.common.utils import shred_traces
 from eclipse.src.backend import embed, extract
-
+import eclipse.common.settings as error_codes
 
 def interactive_cli():
     """
@@ -23,6 +23,13 @@ def interactive_cli():
             message=extract_answers['message_to_hide'],
             password=extract_answers['password'],
             chosen_seed=extract_answers['seed'])
+        if cover_image_path == error_codes.ORIGINAL_IMAGE_PATH_DOES_NOT_EXISTS:
+            print("[! ERROR !] Original image path is not correct")
+            return
+        elif cover_image_path == error_codes.OUTPUT_IMAGE_PATH_DOES_NOT_EXISTS:
+            print("[! ERROR !] Output path is not a valid path")
+            return
+
         print("[*] Message successfully hidden in the image")
 
         shred_answers = prompt(cli_q.shred_questions)
@@ -38,6 +45,12 @@ def interactive_cli():
         message = extract(stego_img_path=extract_answers['stego_img_path'],
                           password=extract_answers['password'],
                           chosen_seed=extract_answers['seed'])
+        if message == error_codes.COULD_NOT_DECRYPT:
+            print("[! ERROR !] Could not decrypt the message.")
+            return
+        elif message == error_codes.ORIGINAL_IMAGE_PATH_DOES_NOT_EXISTS:
+            print("[! ERROR !] Image path is not correct")
+            return
         print("[*] Extracted hidden message: '%s'" % message)
 
         if prompt(cli_q.save_message_question)['save_message']:
