@@ -1,7 +1,7 @@
 <img src="eclipse/resources/eclipse_icon.png" align="right" width="100"/>
 
 
-# Eclipse
+# Eclipse - Image Steganography Tool
 
 Eclipse is a **steganography command-line tool** (and module) that can be used to hide and extract messages from images.
 
